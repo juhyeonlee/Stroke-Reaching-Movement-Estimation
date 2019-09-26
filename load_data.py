@@ -55,9 +55,9 @@ for sub_id in subject_id:
     sub_data[sub_id].target_dist = indices_data[:, 6]
     sub_data[sub_id].target_angle = indices_data[:, 7]
 
-    # to binary label (1: no comp, 0: comp)
-    sub_data[sub_id].reach_comp_label = (indices_data[:, 4] > 0).astype(int)
-    sub_data[sub_id].retract_comp_label = (indices_data[:, 5] > 0).astype(int)
+    # to binary label (0: no comp, 1: comp)
+    sub_data[sub_id].reach_comp_label = (indices_data[:, 4] == 0).astype(int)
+    sub_data[sub_id].retract_comp_label = (indices_data[:, 5] == 0).astype(int)
 
     # left forearm, left upperarm, trunk, right upperarm, right forearm
     for idx, s_name in enumerate(sensor_name):

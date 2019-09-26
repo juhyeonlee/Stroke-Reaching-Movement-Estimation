@@ -37,3 +37,6 @@ class CompData:
         self.free_acc_affect_upper_reach = []
         self.free_acc_affect_upper_retract = []
 
+        self.vel_affect_fore_reach = []
+        self.vel_affect_fore_retract = []
+
