@@ -66,9 +66,9 @@ for sub_id in subject_id:
         for ii in range(len(sub_data[sub_id].reach_begin)):
             # sub 1 because of the diff. between matlab and python index
             reach_begin = sub_data[sub_id].reach_begin[ii] - 1
-            reach_end = sub_data[sub_id].reach_end[ii] - 1
+            reach_end = sub_data[sub_id].reach_end[ii]
             retract_begin = sub_data[sub_id].retract_begin[ii] - 1
-            retract_end = sub_data[sub_id].retract_end[ii] - 1
+            retract_end = sub_data[sub_id].retract_end[ii]
             if idx == 0:
                 sub_data[sub_id].free_acc_L_fore_reach.append(time_series[reach_begin:reach_end])
                 sub_data[sub_id].free_acc_L_fore_retract.append(time_series[retract_begin:retract_end])
