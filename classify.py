@@ -59,13 +59,13 @@ for sub_id in subject_id:
     for ii in range(len(velfilt_affect_fore_reach)):
         mvel_xy_reach = magnitude_xy(velfilt_affect_fore_reach[ii])
         mvelnofilt_xy_reach = magnitude_xy(vel_affect_fore_reach[ii])
-        macc_xy_reach = magnitude_xy(free_acc_affect_fore_reach[ii])
+        macc_xy_reach = magnitude_xy(np.gradient(free_acc_affect_fore_reach[ii], dx, axis=0))
         # residual_reach = abs(mvelnofilt_xy_reach - mvel_xy_reach)
         mvel_xy_reach_norm = resample(mvel_xy_reach / np.mean(mvel_xy_reach), resample_num, np.arange(len(mvel_xy_reach)))[0]
 
         feat, feature_names = extract_features(mvel_xy_reach, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
         feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
-        feat3, feature_names3 = extract_features(macc_xy_reach, None, fs=100, prefix='acc_')
+        # feat3, feature_names3 = extract_features(macc_xy_reach, None, fs=100, prefix='acc_')
 
         # feat3, feature_names3 = extract_features(residual_reach, None, fs=100, prefix='residual_')
 
@@ -93,13 +93,13 @@ for sub_id in subject_id:
     for ii in range(len(velfilt_affect_fore_retract)):
         mvel_xy_retract = magnitude_xy(velfilt_affect_fore_retract[ii])
         mvelnofilt_xy_retract = magnitude_xy(vel_affect_fore_retract[ii])
-        macc_xy_retract = magnitude_xy(free_acc_affect_fore_retract[ii])
+        macc_xy_retract = magnitude_xy(np.gradient(free_acc_affect_fore_retract[ii], dx, axis=0))
         # residual_retract = abs(mvelnofilt_xy_retract - mvel_xy_retract)
         mvel_xy_retract_norm = resample(mvel_xy_retract / np.mean(mvel_xy_retract), resample_num, np.arange(len(mvel_xy_retract)))[0]
 
         feat, feature_names = extract_features(mvel_xy_retract, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
         feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
-        feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
+        # feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
 
         # feat3, feature_names3 = extract_features(residual_retract, None, fs=100, prefix='residual_')
 
@@ -151,10 +151,11 @@ predicted = np.zeros(compensation_labels.shape)
 predicted_testscore = np.zeros(compensation_labels.shape)
 
 # p_grid ={'C': [0.001, 0.01, 0.1, 1, 10], 'gamma': [0.001, 0.01, 0.1, 1]}
-p_grid ={'C': [5, 10, 15, 20], 'gamma': [0.001]}
+p_grid ={'C': [x for x in range(5, 21)], 'gamma': [1]} # better -> take long time
+# p_grid ={'C': [5, 10, 15, 20], 'gamma': [0.001]}
 r_grid = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
-selnum_f_grid = [5, 6, 7, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
-print(selnum_f_grid)
+selnum_f_grid = [5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
+print(p_grid, selnum_f_grid)
 num_comb = len(p_grid['C']) * len(p_grid['gamma']) * len(selnum_f_grid)
 print('total combination grid search', num_comb)
 # selnum_f = 17
@@ -182,6 +183,7 @@ for s in subject_id:
     inner_subject_id = np.delete(inner_subject_id, np.argwhere(inner_subject_id == s))
 
     val_scores = np.zeros(num_comb)
+    print('testing!!!!!!', s)
 
     j = 0
     for n_keep in selnum_f_grid:
@@ -201,6 +203,7 @@ for s in subject_id:
                     val_feats = scaler_inner.transform(val_feats)
 
                     fsel = SelectKBest(f_classif, k=n_keep).fit(inner_train_feats, inner_train_labels)
+                    # print(i_s, feature_names[fsel.get_support()])
                     inner_train_feats = fsel.transform(inner_train_feats)
                     val_feats = fsel.transform(val_feats)
 
