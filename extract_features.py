@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.signal import find_peaks, peak_prominences
-from scipy.stats import skew, kurtosis, entropy
+from scipy.stats import skew, kurtosis, entropy, iqr, median_absolute_deviation
 from scipy.fftpack import fftfreq, fft
 from utils import rms
 
 
-def extract_features(ts, mft_score, fs=100):
+def extract_features(ts, mft_score, fs=100, prefix='n'):
 
     feature_names = []
     feat = []
@@ -24,41 +24,62 @@ def extract_features(ts, mft_score, fs=100):
     hoff = 30 * np.power(ts_idx, 4) - 60 * np.power(ts_idx, 3) + 30 * np.power(ts_idx, 2)
     homog_mean = np.pi / 2 * np.sin(np.pi * ts_idx)
 
-    feat.append(len(ts))
-    feature_names.append('dur')
+    feat.append(float(len(ts)))
+    feature_names.append(prefix + 'dur')
 
-    feat.append(len(peaks))
-    feature_names.append('numpeaks')
+    feat.append(float(np.argmax(ts)))
+    feature_names.append(prefix + 'peakloc')
 
-    feat.append(len(peaks) / len(ts))
-    feature_names.append('numpeaks/dur')
+    feat.append(float(np.argmax(ts))/len(ts))
+    feature_names.append(prefix + 'peakloc/dur')
+
+    feat.append(float(len(peaks)))
+    feature_names.append(prefix + 'numpeaks')
+
+    feat.append(float(len(peaks)) / float(len(ts)))
+    feature_names.append(prefix + 'numpeaks/dur')
 
     feat.append(np.mean(ts))
-    feature_names.append('mean')
+    feature_names.append(prefix + 'mean')
 
     feat.append(np.mean(ts) / np.max(ts))
-    feature_names.append('mean/peak')
+    feature_names.append(prefix + 'mean/peak')
 
     feat.append(np.log10(np.mean(ts) / np.max(ts)))
-    feature_names.append('logmean/peak')
+    feature_names.append(prefix + 'logmean/peak')
 
     feat.append(np.median(ts))
-    feature_names.append('median')
+    feature_names.append(prefix + 'median')
+
+    feat.append(np.std(ts) / np.mean(ts))
+    feature_names.append(prefix + 'normstd')
 
     feat.append(np.max(ts) / len(ts))
-    feature_names.append('max/dur')
+    feature_names.append(prefix + 'max/dur')
 
     feat.append(1 / np.max(ts - ts.mean()))
-    feature_names.append('1/peaknorm')
+    feature_names.append(prefix + '1/peaknorm')
 
     feat.append(np.max(ts - ts.mean()))
-    feature_names.append('peaknorm')
+    feature_names.append(prefix + 'peaknorm')
 
     feat.append(rms(hoff - ts))
-    feature_names.append('rmshoff')
+    feature_names.append(prefix + 'rmshoff')
 
     feat.append(rms(homog_mean - ts))
-    feature_names.append('rmshomog')
+    feature_names.append(prefix + 'rmshomog')
+
+    feat.append(np.std(np.diff(ts)) / np.mean(np.diff(ts)))
+    feature_names.append(prefix + 'smoothness')
+
+    # feat.append(np.std(np.mean(ts_m ** 2)))
+    # feature_names.append('rms')
+
+    feat.append(iqr(ts_m))
+    feature_names.append(prefix + 'iqr')
+
+    feat.append(median_absolute_deviation(ts_m))
+    feature_names.append(prefix + 'mad')
 
     if len(peaks) > 1:
         feat.append(np.diff(peaks).max())
@@ -76,66 +97,67 @@ def extract_features(ts, mft_score, fs=100):
     else:
         feat.extend([0.] * 12)
 
-    feature_names.append('maxpeakdur')
-    feature_names.append('meanpeakdur')
-    feature_names.append('stdpeakdur')
-    feature_names.append('10peakdur')
-    feature_names.append('50peakdur')
-    feature_names.append('90peaksdur')
-    feature_names.append('maxpeakpromi')
-    feature_names.append('meanpeakpromi')
-    feature_names.append('stdpeakpromi')
-    feature_names.append('10peakpromi')
-    feature_names.append('50peakpromi')
-    feature_names.append('90peakpromi')
+    feature_names.append(prefix + 'maxpeakdur')
+    feature_names.append(prefix + 'meanpeakdur')
+    feature_names.append(prefix + 'stdpeakdur')
+    feature_names.append(prefix + '10peakdur')
+    feature_names.append(prefix + '50peakdur')
+    feature_names.append(prefix + '90peaksdur')
+    feature_names.append(prefix + 'maxpeakpromi')
+    feature_names.append(prefix + 'meanpeakpromi')
+    feature_names.append(prefix + 'stdpeakpromi')
+    feature_names.append(prefix + '10peakpromi')
+    feature_names.append(prefix + '50peakpromi')
+    feature_names.append(prefix + '90peakpromi')
 
     feat.append(skew(ts))
-    feature_names.append('skew')
+    feature_names.append(prefix + 'skew')
 
     feat.append(kurtosis(ts))
-    feature_names.append('kurtosis')
+    feature_names.append(prefix + 'kurtosis')
 
     feat.append(np.var(ts))
-    feature_names.append('var')
+    feature_names.append(prefix + 'var')
 
     feat.append(entropy(ts))
-    feature_names.append('entropy')
+    feature_names.append(prefix + 'entropy')
 
     feat.append(sortp[0])
-    feature_names.append('loc1stfreq')
+    feature_names.append(prefix + 'loc1stfreq')
 
     feat.append(sortp[1])
-    feature_names.append('loc2stfreq')
+    feature_names.append(prefix + 'loc2stfreq')
 
     feat.append(freq[sortp[0]])
-    feature_names.append('1stfreq')
+    feature_names.append(prefix + '1stfreq')
 
     feat.append(freq[sortp[1]])
-    feature_names.append('2ndfreq')
+    feature_names.append(prefix + '2ndfreq')
 
     feat.append(freq[sortp[0]] / freq[sortp[1]])
-    feature_names.append('1stfreq/2ndfreq')
+    feature_names.append(prefix + '1stfreq/2ndfreq')
 
-    feat.append(np.max(psd) / np.sum(psd))
-    feature_names.append('maxpsd/sumpsd')
+    # feat.append(np.max(psd) / np.sum(psd))
+    # feature_names.append(prefix + 'maxpsd/sumpsd')
 
     feat.append(np.sum(psd) / np.sum(psd[sortp[1:]]))
-    feature_names.append('sumpsd/sumf2ndpsd')
+    feature_names.append(prefix + 'sumpsd/sumf2ndpsd')
 
     feat.append(psd[sortp[0]])
-    feature_names.append('1stpsd')
+    feature_names.append(prefix + '1stpsd')
 
     feat.append(psd[sortp[1]])
-    feature_names.append('2ndpsd')
+    feature_names.append(prefix + '2ndpsd')
 
     feat.append(len(freq))
-    feature_names.append('numfreq')
+    feature_names.append(prefix + 'numfreq')
 
     feat.append(np.var(freq))
-    feature_names.append('varfreq')
+    feature_names.append(prefix + 'varfreq')
 
-    feat.append(mft_score)
-    feature_names.append('mftscore')
+    if mft_score is not None:
+        feat.append(float(mft_score))
+        feature_names.append('mftscore')
 
     assert len(feat) == len(feature_names)
 
