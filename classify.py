@@ -154,14 +154,14 @@ predicted_testscore = np.zeros(compensation_labels.shape)
 p_grid ={'C': [x for x in range(5, 21)], 'gamma': [1]} # better -> take long time
 # p_grid ={'C': [5, 10, 15, 20], 'gamma': [0.001]}
 r_grid = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
-selnum_f_grid = [5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
+selnum_f_grid = [4, 5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
 print(p_grid, selnum_f_grid)
 num_comb = len(p_grid['C']) * len(p_grid['gamma']) * len(selnum_f_grid)
 print('total combination grid search', num_comb)
 # selnum_f = 17
 
-fpr_set = []
-tpr_set = []
+# features = features[:, [3,33,44,48,78]]
+# print(feature_names[[3, 33, 44, 48, 78]])
 for s in subject_id:
     start_time = time.time()
 
@@ -203,7 +203,6 @@ for s in subject_id:
                     val_feats = scaler_inner.transform(val_feats)
 
                     fsel = SelectKBest(f_classif, k=n_keep).fit(inner_train_feats, inner_train_labels)
-                    # print(i_s, feature_names[fsel.get_support()])
                     inner_train_feats = fsel.transform(inner_train_feats)
                     val_feats = fsel.transform(val_feats)
 
@@ -269,15 +268,13 @@ for s in subject_id:
     model.fit(train_feats, train_labels)
     predicted[all_sub == s] = model.predict(test_feats)
     predicted_testscore[all_sub == s] = model.decision_function(test_feats)
-    fpr_per_sub, tpr_per_sub, _ = roc_curve(compensation_labels[all_sub == s], predicted_testscore[all_sub == s])
-    fpr_set.append(fpr_per_sub)
-    tpr_set.append(tpr_per_sub)
     print('elapsed time:', time.time() - start_time)
 
 
 
 print(compensation_labels)
 print(predicted)
+print(predicted_testscore)
 fig_conf = plt.figure(figsize=[6, 6])
 ax1 = fig_conf.add_subplot(1, 1, 1)
 plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'], normalize=True)
@@ -289,28 +286,27 @@ plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'
 # plot_confusion_matrix(ax3, compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
 # ax3.set_title('Retracting')
 fig_conf.tight_layout()
-fig_conf.savefig('confusion_matrix_selectkbest_2class_nofiltadd_test')
-np.save('selectkbest_2class_nofiltadd_test', predicted)
-np.save('selectkbest_2class_nofiltadd_score_test', predicted_testscore)
+fig_conf.savefig('confusion_matrix_selectkbest_2class_nofiltadd_test2')
+np.save('selectkbest_2class_nofiltadd_test2', predicted)
+np.save('selectkbest_2class_nofiltadd_score_test2', predicted_testscore)
 
-print('Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
+print('Accuracy: {:.3f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
 print(classification_report(compensation_labels, predicted))
-print('weighted per class F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='weighted')))
-print('unweighted per class F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='macro')))
-print('global F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='micro')))
+print('weighted per class F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='weighted')))
+print('unweighted per class F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='macro')))
+print('global F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='micro')))
 
 # print('Reaching Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[reach_retract_mask], predicted[reach_retract_mask]) * 100))
 # print('Retracting Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask]) * 100))
 
 # Compute ROC curve and ROC area for each class
-
-fpr, tpr, _ = roc_curve(compensation_labels, predicted_testscore)
+fpr, tpr, thresholds = roc_curve(compensation_labels, predicted_testscore)
 roc_auc = auc(fpr, tpr)
 roc_fig = plt.figure()
 roc_ax = roc_fig.add_subplot(1, 1, 1)
 roc_ax.plot(fpr, tpr, color='red', lw=3, label='ROC curve (area = %0.2f)' % roc_auc)
-# for kk in range(len(fpr_set)):
-#     roc_ax.plot(fpr_set[kk], tpr_set[kk], label=str(subject_id[kk]))
+roc_ax.plot(fpr, thresholds, markeredgecolor='b',linestyle='dashed', color='b')
 plt.legend()
-roc_fig.savefig('roc_selectkbest_2class_nofiltadd_test')
+plt.ylim(0, 1)
+roc_fig.savefig('roc_selectkbest_2class_nofiltadd_test2')
 plt.show()
