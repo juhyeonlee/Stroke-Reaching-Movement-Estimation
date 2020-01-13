@@ -64,7 +64,7 @@ for sub_id in subject_id:
         mvel_xy_reach_norm = resample(mvel_xy_reach / np.mean(mvel_xy_reach), resample_num, np.arange(len(mvel_xy_reach)))[0]
 
         feat, feature_names = extract_features(mvel_xy_reach, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
-        feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
+        # feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
         # feat3, feature_names3 = extract_features(macc_xy_reach, None, fs=100, prefix='acc_')
 
         # feat3, feature_names3 = extract_features(residual_reach, None, fs=100, prefix='residual_')
@@ -78,7 +78,7 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_reach[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat + feat2)
+        features.append(feat)# + feat2)
         all_sub.append(sub_id)
         reach_retract_mask.append(True)
 
@@ -98,7 +98,7 @@ for sub_id in subject_id:
         mvel_xy_retract_norm = resample(mvel_xy_retract / np.mean(mvel_xy_retract), resample_num, np.arange(len(mvel_xy_retract)))[0]
 
         feat, feature_names = extract_features(mvel_xy_retract, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
-        feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
+        # feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
         # feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
 
         # feat3, feature_names3 = extract_features(residual_retract, None, fs=100, prefix='residual_')
@@ -112,7 +112,7 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_retract[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat + feat2)
+        features.append(feat) # + feat2)
         all_sub.append(sub_id)
         reach_retract_mask.append(False)
 
@@ -133,7 +133,7 @@ for sub_id in subject_id:
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 features = np.asarray(features)
 print(features.shape)
-feature_names = np.asarray(feature_names + feature_names2)
+feature_names = np.asarray(feature_names) # + feature_names2)
 
 print('the number of features', len(feature_names))
 print('comp 0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where(compensation_labels == 1)[0]), 'comp2',
@@ -154,13 +154,13 @@ predicted_testscore = np.zeros(compensation_labels.shape)
 p_grid ={'C': [x for x in range(5, 21)], 'gamma': [1]} # better -> take long time
 # p_grid ={'C': [5, 10, 15, 20], 'gamma': [0.001]}
 r_grid = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
-selnum_f_grid = [4, 5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
+selnum_f_grid = [3, 4, 5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
 print(p_grid, selnum_f_grid)
 num_comb = len(p_grid['C']) * len(p_grid['gamma']) * len(selnum_f_grid)
 print('total combination grid search', num_comb)
 # selnum_f = 17
 
-# features = features[:, [3,33,44,48,78]]
+# features = features[:, [2, 32, 42]]
 # print(feature_names[[3, 33, 44, 48, 78]])
 for s in subject_id:
     start_time = time.time()
@@ -238,10 +238,9 @@ for s in subject_id:
     print('r', np.max(val_scores), np.argmax(val_scores), best_C, best_gamma, best_n_keep)
 
     fsel = SelectKBest(f_classif, k=best_n_keep).fit(train_feats, train_labels)
-    print(s, feature_names[fsel.get_support()])
+    print(s, feature_names[fsel.get_support()]) #, np.argwhere(fsel.get_support()))
     train_feats = fsel.transform(train_feats)
     test_feats = fsel.transform(test_feats)
-    #     fsel = RFE(estimator=RandomForestClassifier(n_estimators=10, random_state=0, class_weight='balanced'),  n_features_to_select=15).fit(train_feats, train_labels)
 
 
     # fsel = ReliefF(n_neighbors=10, n_features_to_keep=best_n_keep)
@@ -288,7 +287,7 @@ plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'
 fig_conf.tight_layout()
 fig_conf.savefig('confusion_matrix_selectkbest_2class_nofiltadd_test2')
 np.save('selectkbest_2class_nofiltadd_test2', predicted)
-np.save('selectkbest_2class_nofiltadd_score_test2', predicted_testscore)
+np.save('selectkbest_2class_score_nofiltadd_test2', predicted_testscore)
 
 print('Accuracy: {:.3f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
 print(classification_report(compensation_labels, predicted))

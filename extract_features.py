@@ -24,8 +24,8 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     hoff = 30 * np.power(ts_idx, 4) - 60 * np.power(ts_idx, 3) + 30 * np.power(ts_idx, 2)
     homog_mean = np.pi / 2 * np.sin(np.pi * ts_idx)
 
-    feat.append(float(len(ts)))
-    feature_names.append(prefix + 'dur')
+    # feat.append(float(len(ts)))
+    # feature_names.append(prefix + 'dur')
 
     feat.append(float(np.argmax(ts)))
     feature_names.append(prefix + 'peakloc')
@@ -148,9 +148,9 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
 
     feat.append(psd[sortp[1]])
     feature_names.append(prefix + '2ndpsd')
-
-    feat.append(len(freq))
-    feature_names.append(prefix + 'numfreq')
+    #
+    # feat.append(len(freq))
+    # feature_names.append(prefix + 'numfreq')
 
     feat.append(np.var(freq))
     feature_names.append(prefix + 'varfreq')
