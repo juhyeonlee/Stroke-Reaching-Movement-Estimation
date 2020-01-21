@@ -25,8 +25,8 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     hoff = 30 * np.power(ts_idx, 4) - 60 * np.power(ts_idx, 3) + 30 * np.power(ts_idx, 2)
     homog_mean = np.pi / 2 * np.sin(np.pi * ts_idx)
 
-    # feat.append(float(len(ts)))
-    # feature_names.append(prefix + 'dur')
+    feat.append(np.log(float(len(ts))))
+    feature_names.append(prefix + 'logdur')
 
     feat.append(float(np.argmax(ts)))
     feature_names.append(prefix + 'peakloc')
@@ -57,6 +57,9 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
 
     feat.append(np.max(ts) / len(ts))
     feature_names.append(prefix + 'max/dur')
+
+    feat.append(np.max(ts) / np.log(len(ts)))
+    feature_names.append(prefix + 'max/logdur')
 
     feat.append(1 / np.max(ts - ts.mean()))
     feature_names.append(prefix + '1/peaknorm')
@@ -138,8 +141,8 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     feat.append(freq[sortp[0]] / freq[sortp[1]])
     feature_names.append(prefix + '1stfreq/2ndfreq')
 
-    # feat.append(np.max(psd) / np.sum(psd))
-    # feature_names.append(prefix + 'maxpsd/sumpsd')
+    feat.append(np.max(psd) / np.sum(psd))
+    feature_names.append(prefix + 'maxpsd/sumpsd')
 
     feat.append(np.sum(psd) / np.sum(psd[sortp[1:]]))
     feature_names.append(prefix + 'sumpsd/sumf2ndpsd')
@@ -149,25 +152,25 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
 
     feat.append(psd[sortp[1]])
     feature_names.append(prefix + '2ndpsd')
-    #
-    # feat.append(len(freq))
-    # feature_names.append(prefix + 'numfreq')
+
+    feat.append(len(freq))
+    feature_names.append(prefix + 'numfreq')
 
     feat.append(np.var(freq))
     feature_names.append(prefix + 'varfreq')
 
-    # if len(peaks) >= 2:
-    #     feat.append((mag_peaks_sor[0] - mag_peaks_sor[1])/np.max(ts))
-    # elif len(peaks)  == 1:
-    #     feat.append(mag_peaks_sor[0]/np.max(ts))
-    # else:
-    #     feat.append(0.0)
-    #     print(len(peaks), 'nopeak')
-    # feature_names.append(prefix+'peak1peak2magdiff')
+    if len(peaks) >= 2:
+        feat.append((mag_peaks_sor[0] - mag_peaks_sor[1])/np.max(ts))
+    elif len(peaks)  == 1:
+        feat.append(mag_peaks_sor[0]/np.max(ts))
+    else:
+        feat.append(0.0)
+        print(len(peaks), 'nopeak')
+    feature_names.append(prefix+'peak1peak2magdiff')
 
 
-    # feat.append(float(len(peaks)) / np.log(len(ts)))
-    # feature_names.append(prefix + 'numpeaks/logdur')
+    feat.append(float(len(peaks)) / np.log(len(ts)))
+    feature_names.append(prefix + 'numpeaks/logdur')
 
 
     # if mft_score is not None:
