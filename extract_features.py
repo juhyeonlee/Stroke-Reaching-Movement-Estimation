@@ -11,6 +11,7 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     feat = []
     # find peaks
     peaks, _ = find_peaks(ts)
+    mag_peaks_sor = np.flip(np.sort(ts[peaks]))
     prominences, *_ = peak_prominences(ts, peaks)
     # power spectrum
     ts_m = ts - ts.mean()
@@ -36,8 +37,8 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     feat.append(float(len(peaks)))
     feature_names.append(prefix + 'numpeaks')
 
-    feat.append(float(len(peaks)) / float(len(ts)))
-    feature_names.append(prefix + 'numpeaks/dur')
+    # feat.append(float(len(peaks)) / float(len(ts)))
+    # feature_names.append(prefix + 'numpeaks/dur')
 
     feat.append(np.mean(ts))
     feature_names.append(prefix + 'mean')
@@ -155,9 +156,23 @@ def extract_features(ts, mft_score, fs=100, prefix='n'):
     feat.append(np.var(freq))
     feature_names.append(prefix + 'varfreq')
 
-    if mft_score is not None:
-        feat.append(float(mft_score))
-        feature_names.append('mftscore')
+    # if len(peaks) >= 2:
+    #     feat.append((mag_peaks_sor[0] - mag_peaks_sor[1])/np.max(ts))
+    # elif len(peaks)  == 1:
+    #     feat.append(mag_peaks_sor[0]/np.max(ts))
+    # else:
+    #     feat.append(0.0)
+    #     print(len(peaks), 'nopeak')
+    # feature_names.append(prefix+'peak1peak2magdiff')
+
+
+    # feat.append(float(len(peaks)) / np.log(len(ts)))
+    # feature_names.append(prefix + 'numpeaks/logdur')
+
+
+    # if mft_score is not None:
+    #     feat.append(float(mft_score))
+    #     feature_names.append('mftscore')
 
     assert len(feat) == len(feature_names)
 
