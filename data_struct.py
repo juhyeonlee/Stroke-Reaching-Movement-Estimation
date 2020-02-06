@@ -13,6 +13,8 @@ class CompData:
         self.retract_comp_score = None
         self.reach_comp_label = None
         self.retract_comp_label = None
+        self.reach_fas_score = None
+        self.retract_fas_score = None
 
         self.target_dist = None
         self.target_angle = None
@@ -39,4 +41,12 @@ class CompData:
 
         self.vel_affect_fore_reach = []
         self.vel_affect_fore_retract = []
+
+        self.velfilt_affect_fore_reach = []
+        self.velfilt_affect_fore_retract = []
+
+        self.accfilt_affect_fore_reach = []
+        self.accfilt_affect_fore_retract = []
+
+
 

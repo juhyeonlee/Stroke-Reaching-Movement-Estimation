@@ -19,6 +19,9 @@ affect_side_file = os.path.join(dir_path, 'affected_side.csv')
 sensor_name = ['00B4249F', '00B424B0', '00B424B4', '00B424B5', '00B424B6']
 file_tag = 'MT_012106C2-004-000_'
 
+# for fas score
+fas_dir_path = './NER17/data'
+
 # list subject ID
 subject_id = np.arange(0, num_subjects) + 1
 subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
@@ -58,6 +61,12 @@ for sub_id in subject_id:
     # to binary label (0: no comp, 1: comp)
     sub_data[sub_id].reach_comp_label = (indices_data[:, 4] == 0).astype(int)
     sub_data[sub_id].retract_comp_label = (indices_data[:, 5] == 0).astype(int)
+
+    fas_data = np.genfromtxt(os.path.join(fas_dir_path, str(sub_id) + "_label.csv"),
+                             delimiter=',', skip_header=1, dtype=int, usecols=(4, 10))
+
+    sub_data[sub_id].reach_fas_score = fas_data[:, 0]
+    sub_data[sub_id].retract_fas_score = fas_data[:, 1]
 
     # left forearm, left upperarm, trunk, right upperarm, right forearm
     for idx, s_name in enumerate(sensor_name):
