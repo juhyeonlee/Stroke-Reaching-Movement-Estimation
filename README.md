@@ -7,7 +7,7 @@ Using reaching / retracting 2D movement data with one wrist sensor (affected sid
 
 **Code Description**
 -
-- data_struc.py: class of the data structure
+- data_struct.py: class of the data structure
 - load_data.py: load data and put data aligned with the data structure
 - plot_raw_acc_vel_pos.py: preprocess data and visualize
 - extract_features.py: the function extracting features
