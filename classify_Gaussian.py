@@ -85,7 +85,7 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_reach[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat + feat_z + feat_acc)
+        features.append(feat + feat_acc) # + feat_acc)
         all_sub.append(sub_id)
         reach_retract_mask.append(True)
 
@@ -146,7 +146,7 @@ for sub_id in subject_id:
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 features = np.array(features)
 print(features.shape)
-feature_names = np.asarray(feature_names + feature_names_z + feature_names_acc)
+feature_names = np.asarray(feature_names + feature_names_acc) #feature_names_z + feature_names_acc)
 
 print('the number of features', len(feature_names))
 print('comp0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where(compensation_labels == 1)[0]),
@@ -219,10 +219,15 @@ for s in subject_id:
     val_scores = np.zeros(num_comb)
     print('testing!!!!!!', s)
 
+    # selector = CFS(rfunc=spearmanr).fit(train_feats, train_labels, method='forward')
+    # train_feats = selector.transform(train_feats)
+    # test_feats = selector.transform(test_feats)
+    # print(feature_names[selector.selected_features])
+
     kernel = 1.0 * RBF(1.0)
     model = GaussianProcessClassifier(kernel=kernel, random_state=0, n_restarts_optimizer=10, max_iter_predict=100)
     # model = RandomForestClassifier(n_estimators=400, random_state=0)
-    # model = SVC(kernel='linear').fit(train_feats, train_labels)
+    # model = SVC(kernel='linear', probability=True).fit(train_feats, train_labels)
 
     model.fit(train_feats, train_labels)
     predicted[all_sub == s] = model.predict(test_feats)

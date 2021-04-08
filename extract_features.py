@@ -64,11 +64,11 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     # feat.append(np.std(ts) / np.mean(ts))
     # feature_names.append(prefix + 'normstd')
 
-    feat.append(np.max(ts) / len(ts))
-    feature_names.append(prefix + 'max/dur')
-
-    feat.append(np.max(ts) / np.log(len(ts)))
-    feature_names.append(prefix + 'max/logdur')
+    # feat.append(np.max(ts) / len(ts))
+    # feature_names.append(prefix + 'max/dur')
+    #
+    # feat.append(np.max(ts) / np.log(len(ts)))
+    # feature_names.append(prefix + 'max/logdur')
 
     # feat.append(1 / np.max(ts - ts.mean()))
     # feature_names.append(prefix + '1/peaknorm')
@@ -129,17 +129,17 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     # feat.append(kurtosis(ts))
     # feature_names.append(prefix + 'kurtosis')
 
-    feat.append(np.var(ts))
-    feature_names.append(prefix + 'var')
+    # feat.append(np.var(ts))
+    # feature_names.append(prefix + 'var')
 
-    feat.append(entropy(ts / np.sum(ts)))
-    feature_names.append(prefix + 'entropy')
+    # feat.append(entropy(ts / np.sum(ts)))
+    # feature_names.append(prefix + 'entropy')
 
-    feat.append(sortp[0])
-    feature_names.append(prefix + 'loc1stfreq')
-
-    feat.append(sortp[1])
-    feature_names.append(prefix + 'loc2stfreq')
+    # feat.append(sortp[0])
+    # feature_names.append(prefix + 'loc1stfreq')
+    #
+    # feat.append(sortp[1])
+    # feature_names.append(prefix + 'loc2stfreq')
 
     feat.append(freq[sortp[0]])
     feature_names.append(prefix + '1stfreq')
@@ -153,8 +153,8 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     feat.append(np.log(freq[sortp[1]]))
     feature_names.append(prefix + 'log2ndfreq')
 
-    feat.append(freq[sortp[0]] / freq[sortp[1]])
-    feature_names.append(prefix + '1stfreq/2ndfreq')
+    # feat.append(freq[sortp[0]] / freq[sortp[1]])
+    # feature_names.append(prefix + '1stfreq/2ndfreq')
 
     feat.append(np.max(psd) / np.sum(psd))
     feature_names.append(prefix + 'maxpsd/sumpsd')
