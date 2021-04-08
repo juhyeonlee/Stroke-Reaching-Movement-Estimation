@@ -1,8 +1,10 @@
 import numpy as np
-from scipy.signal import find_peaks, peak_prominences
+from scipy.signal import find_peaks, peak_prominences, periodogram
 from scipy.stats import skew, kurtosis, entropy, iqr, median_absolute_deviation
 from scipy.fftpack import fftfreq, fft
 from utils import rms
+import antropy as ant
+
 
 
 def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
@@ -24,6 +26,7 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     ts_idx = np.linspace(0, 1, len(ts))
     hoff = 30 * np.power(ts_idx, 4) - 60 * np.power(ts_idx, 3) + 30 * np.power(ts_idx, 2)
     homog_mean = np.pi / 2 * np.sin(np.pi * ts_idx)
+
 
     # it's okay to remove this !!!!!
     # if z is False:
@@ -129,7 +132,7 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     feat.append(np.var(ts))
     feature_names.append(prefix + 'var')
 
-    feat.append(entropy(ts))
+    feat.append(entropy(ts / np.sum(ts)))
     feature_names.append(prefix + 'entropy')
 
     feat.append(sortp[0])
@@ -170,6 +173,9 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
 
     feat.append(np.log(len(freq)))
     feature_names.append(prefix + 'lognumfreq')
+
+    feat.append(np.log(len(freq)) / np.log(len(ts)))
+    feature_names.append(prefix + 'lognumfreq/logdur')
 
     # feat.append(np.var(freq))
     # feature_names.append(prefix + 'varfreq')
