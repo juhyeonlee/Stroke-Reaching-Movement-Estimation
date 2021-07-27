@@ -18,8 +18,6 @@ sns.set_context('talk')
 sns.set_style('ticks')
 color_palette = sns.color_palette('colorblind')
 
-
-
 # list subject ID
 subject_id = np.arange(0, num_subjects) + 1
 subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
@@ -28,27 +26,13 @@ subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 15))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 6))
 
-# subject_id = np.delete(subject_id, np.argwhere(subject_id == 5))
-# subject_id = np.delete(subject_id, np.argwhere(subject_id == 12))
-
-
-
-print(subject_id)
-# subject_id = np.array([1, 5, 8, 9, 10, 11, 12, 17])
-
 save_data_file = open('sub_data_filt_ok.p', 'rb')
 sub_data = pickle.load(save_data_file)
 
-# predicted = np.load('gp_2class_test3.npy')
-# predicted_testscore = np.load('gp_2class_score_test3.npy')
-predicted = np.load('gp_3class_gaussian.npy')
-predicted_testscore = np.load('gp_3class_score_gaussian.npy')
-predicted_rf = np.load('gp_3class_rf.npy')
-predicted_testscore_rf = np.load('gp_3class_score_rf.npy')
-predicted_linearsvm = np.load('gp_3class_linearsvm.npy')
-predicted_testscore_linearsvm = np.load('gp_3class_score_linearsvm.npy')
-predicted_rbfsvm = np.load('gp_3class_rbfsvm.npy')
-predicted_testscore_rbfsvm = np.load('gp_3class_score_rbfsvm.npy')
+predicted_testscore = np.load('gp_prediction_probability.npy')
+predicted_testscore_rf = np.load('rf_prediction_probability.npy')
+predicted_testscore_linearsvm = np.load('linearsvm_prediction_probability.npy')
+predicted_testscore_rbfsvm = np.load('rbfsvm_prediction_probability.npy')
 
 compensation_labels = []
 for sub_id in subject_id:
@@ -58,12 +42,6 @@ for sub_id in subject_id:
         elif sub_data[sub_id].reach_fas_score[ll] != 5:
             compensation_labels.append(0)
 
-    # for ll in range(len(sub_data[sub_id].retract_comp_score)):
-    #     if sub_data[sub_id].retract_comp_score[ll] == 3:
-    #         compensation_labels.append(1)
-    #     elif sub_data[sub_id].retract_comp_score[ll] != 3:
-    #         compensation_labels.append(0)
-
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 
 fpr, tpr, thresholds = roc_curve(compensation_labels, predicted_testscore)
@@ -71,8 +49,6 @@ fpr, tpr, thresholds = roc_curve(compensation_labels, predicted_testscore)
 fpr_rf, tpr_rf, _ = roc_curve(compensation_labels, predicted_testscore_rf)
 fpr_linearsvm, tpr_linearsvm, _ = roc_curve(compensation_labels, predicted_testscore_linearsvm)
 fpr_rbfsvm, tpr_rbfsvm, _ = roc_curve(compensation_labels, predicted_testscore_rbfsvm)
-
-
 
 best_index = 82
 print(thresholds[best_index])
@@ -108,12 +84,12 @@ print('unweighted per class F1 Score: {:.3f}'.format(f1_score(compensation_label
 roc_auc = auc(fpr, tpr)
 roc_fig = plt.figure(figsize=(7, 6))
 roc_ax = roc_fig.add_subplot(1, 1, 1)
-# roc_ax.plot(fpr, tpr, color='b', lw=3, label='ROC curve (AUC = %0.2f)' % roc_auc, zorder=1) # move forward TODO
+# roc_ax.plot(fpr, tpr, color='b', lw=3, label='ROC curve (AUC = %0.2f)' % roc_auc, zorder=1)
 roc_ax.plot(fpr, tpr, color='b', lw=4, label='Gaussian process (AUC = %0.2f)' % roc_auc, zorder=1)
 roc_ax.plot(fpr_linearsvm, tpr_linearsvm, color='orange', lw=2, label='SVM with linear kernel (AUC = %0.2f)' % auc(fpr_linearsvm, tpr_linearsvm), zorder=1)
 roc_ax.plot(fpr_rbfsvm, tpr_rbfsvm, color='c', lw=2, label='SVM with RBF kernel (AUC = %0.2f)' % auc(fpr_rbfsvm, tpr_rbfsvm), zorder=1)
 roc_ax.plot(fpr_rf, tpr_rf, color='g', lw=2, label='Random forest (AUC = %0.2f)' % auc(fpr_rf, tpr_rf), zorder=1)
-roc_ax.scatter(fpr[best_index], tpr[best_index], s=50, facecolor='r', label='Operating point\n(TPR = 86.4 %, TNR = 86.7 %)', zorder=5) # font TODO
+roc_ax.scatter(fpr[best_index], tpr[best_index], s=50, facecolor='r', label='Operating point\n(TPR = 86.4 %, TNR = 86.7 %)', zorder=5)
 print(1 - fpr[best_index], tpr[best_index])
 plt.legend(facecolor= 'white', borderpad =0.5, loc='lower right', fontsize='small')
 plt.grid()

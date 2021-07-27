@@ -41,7 +41,7 @@ n_classes = 2
 # list subject ID
 subject_id = np.arange(0, num_subjects) + 1
 subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
-# with mft
+# with mft scores
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 3))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 15))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 6))
@@ -49,8 +49,6 @@ subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 5))
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 12))
 
-
-# subject_id = np.array([1, 5, 8, 9, 10, 11, 12, 17])
 
 save_data_file = open('sub_data_filt_ok.p', 'rb')
 sub_data = pickle.load(save_data_file)
@@ -71,19 +69,25 @@ for sub_id in subject_id:
     vel_affect_fore_retract = sub_data[sub_id].vel_affect_fore_retract
     free_acc_affect_fore_reach = sub_data[sub_id].free_acc_affect_fore_reach
     free_acc_affect_fore_retract = sub_data[sub_id].free_acc_affect_fore_retract
+    # for reaching movement
     for ii in range(len(velfilt_affect_fore_reach)):
+        # compute magnitude of x- and y-axis velocity
         mvel_xy_reach = magnitude_xy(velfilt_affect_fore_reach[ii])
+        # compute magnitude of x- and y-axis non-filtered velocity
         mvelnofilt_xy_reach = magnitude_xy(vel_affect_fore_reach[ii])
+        # compute magnitude of x- and y-axis acceleration
         macc_xy_reach = magnitude_xy(free_acc_affect_fore_reach[ii])
+        # compute magnitude of z-axis velocity
         mvel_z_reach = np.sqrt(np.square(velfilt_affect_fore_reach[ii][:, 2]))
         # residual_reach = abs(mvelnofilt_xy_reach - mvel_xy_reach)
+        # normalized magnitude
         mvel_xy_reach_norm = resample(mvel_xy_reach / np.mean(mvel_xy_reach), resample_num, np.arange(len(mvel_xy_reach)))[0]
 
+        # extract features
         feat, feature_names = extract_features(mvel_xy_reach, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
         # feat_z, feature_names_z = extract_features(mvel_z_reach, None, z=True, fs=100, prefix='velfilt_z_')
-        # feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
+        # feat_nonvel, feature_names_nonvel = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
         feat_acc, feature_names_acc = extract_features(macc_xy_reach, None, z=True, fs=100, prefix='acc_')
-
         # feat3, feature_names3 = extract_features(residual_reach, None, fs=100, prefix='residual_')
 
         # feat.append(1.0)
@@ -95,20 +99,21 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_reach[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat + feat_acc) # + feat_acc)
+        # use velocify and acceleration features from xy magnitude for BHI21 paper
+        features.append(feat + feat_acc)
         all_sub.append(sub_id)
         reach_retract_mask.append(True)
 
+    # list up labels
     for ll in range(len(sub_data[sub_id].reach_fas_score)):
-        if sub_data[sub_id].reach_fas_score[ll] == 5: # or sub_data[sub_id].reach_fas_score[ll] == 4:
-        #     sub_data[sub_id].reach_fas_score[ll] = 2
-        # elif sub_data[sub_id].reach_fas_score[ll] == 3 or sub_data[sub_id].reach_fas_score[ll] == 2:
+        if sub_data[sub_id].reach_fas_score[ll] == 5:
             sub_data[sub_id].reach_fas_score[ll] = 1
         else:
             sub_data[sub_id].reach_fas_score[ll] = 0
 
     compensation_labels.extend(sub_data[sub_id].reach_fas_score)
 
+    # for retracting movement
     # for ii in range(len(velfilt_affect_fore_retract)):
     #     mvel_xy_retract = magnitude_xy(velfilt_affect_fore_retract[ii])
     #     mvelnofilt_xy_retract = magnitude_xy(vel_affect_fore_retract[ii])
@@ -121,7 +126,7 @@ for sub_id in subject_id:
     #     feat, feature_names = extract_features(mvel_xy_retract, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
     #     feat_z, feature_names_z = extract_features(mvel_z_retract, None, z=True, fs=100, prefix='velfilt_z_')
     #
-    #     # feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
+    #     # feat_nonvel, feature_names_nonvel = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
     #     # feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
     #
     #     # feat3, feature_names3 = extract_features(residual_retract, None, fs=100, prefix='residual_')
@@ -147,16 +152,10 @@ for sub_id in subject_id:
     #
     # compensation_labels.extend(sub_data[sub_id].retract_comp_score)
 
-    # if sub_id == 12:
-    #     kkk = np.asarray(features)
-    #     dfd = np.asarray(compensation_labels).reshape(-1)
-    #     print(np.mean(kkk[np.where(dfd == 0)[0]], axis=0))
-    #     print(np.mean(kkk[np.where(dfd == 1)[0]], axis=0))
-
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 features = np.array(features)
 print(features.shape)
-feature_names = np.asarray(feature_names + feature_names_acc) #feature_names_z + feature_names_acc)
+feature_names = np.asarray(feature_names + feature_names_acc)
 
 print('the number of features', len(feature_names))
 print('comp0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where(compensation_labels == 1)[0]),
@@ -164,9 +163,7 @@ print('comp0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where
       'comp4', len(np.where(compensation_labels == 4)[0]), 'comp5', len(np.where(compensation_labels == 5)[0]),
       "total", len(compensation_labels))
 
-# for s in subject_id:
-#     all_sub.extend([s] * len(sub_data[s].velfilt_affect_fore_reach))
-#     all_sub.extend([s] * len(sub_data[s].velfilt_affect_fore_retract))
+# investigate correlation between features and labels
 n_features = features.shape[1]
 corrs = np.zeros((n_features,))
 pval = np.zeros((n_features,))
@@ -187,43 +184,38 @@ for i in range(n_features):
 # plot_correlation_matrix(inter_corrs, feature_names, feature_names)
 # plt.show()
 
-
-sel_f=[0, 6, 2]
-# sel_name = ['Log number of peaks \n(velocity)', 'log number of frequency components \n(velocity)',
-#             'Log number of frequency components \n(acceleration)',
-#             'Ratio of the log number of frequency components \nto log duration (velocity)',
-#             'Ratio of the log number of frequency components \nto log duration (acceleration)']
-fig_box = plt.figure(figsize=[25, 5])
-for idx, sel in enumerate(sel_f):
-    stats_dataframe = pd.DataFrame({
-        'Impairment Group': np.hstack([np.array([i for i in compensation_labels])]),
-        'features': np.hstack([np.array([i for i in features[:, sel]])])
-    })
-    ax = fig_box.add_subplot(1, 5, idx+1)
-    data = [features[compensation_labels==0, sel],  features[compensation_labels==1, sel]]
-    print('median', np.median(features[compensation_labels==0, sel]), np.median(features[compensation_labels==1, sel]))
-    ax.boxplot(data)
-    ax.set_xticklabels(['Desirable', 'Undesirable'])
-    # sns.kdeplot(features[compensation_labels==0, sel], legend='Abnormal')
-    # sns.kdeplot(features[compensation_labels==1, sel], legend='Normal')
-    # plt.legend()
-    # plt.title(sel_name[idx])
-    # print('all stat test', welch_anova(stats_dataframe, dv='features', between='Impairment Group'))
-    print('all stat test', welch_anova_np(features[compensation_labels==0, sel],  features[compensation_labels==1, sel]))
-    # print('all stat test - kruskal', kruskal(stats_dataframe, dv='features', between='Impairment Group'))
-    # print('pair', pairwise_gameshowell(stats_dataframe, dv='features', between='Impairment Group'))
-
-for ii in range(n_features):
-    print('all stat test',
-          welch_anova_np(features[compensation_labels == 0, ii], features[compensation_labels == 1, ii]))
-plt.tight_layout()
-plt.savefig('box_plots2.pdf')
-# plt.show()
-
-
-
-
-
+# # for paper feature figure
+# sel_f=[0, 6, 2]
+# # sel_name = ['Log number of peaks \n(velocity)', 'log number of frequency components \n(velocity)',
+# #             'Log number of frequency components \n(acceleration)',
+# #             'Ratio of the log number of frequency components \nto log duration (velocity)',
+# #             'Ratio of the log number of frequency components \nto log duration (acceleration)']
+# fig_box = plt.figure(figsize=[25, 5])
+# for idx, sel in enumerate(sel_f):
+#     stats_dataframe = pd.DataFrame({
+#         'Impairment Group': np.hstack([np.array([i for i in compensation_labels])]),
+#         'features': np.hstack([np.array([i for i in features[:, sel]])])
+#     })
+#     ax = fig_box.add_subplot(1, 5, idx+1)
+#     data = [features[compensation_labels==0, sel],  features[compensation_labels==1, sel]]
+#     print('median', np.median(features[compensation_labels==0, sel]), np.median(features[compensation_labels==1, sel]))
+#     ax.boxplot(data)
+#     ax.set_xticklabels(['Desirable', 'Undesirable'])
+#     # sns.kdeplot(features[compensation_labels==0, sel], legend='Abnormal')
+#     # sns.kdeplot(features[compensation_labels==1, sel], legend='Normal')
+#     # plt.legend()
+#     # plt.title(sel_name[idx])
+#     # print('all stat test', welch_anova(stats_dataframe, dv='features', between='Impairment Group'))
+#     print('all stat test', welch_anova_np(features[compensation_labels==0, sel],  features[compensation_labels==1, sel]))
+#     # print('all stat test - kruskal', kruskal(stats_dataframe, dv='features', between='Impairment Group'))
+#     # print('pair', pairwise_gameshowell(stats_dataframe, dv='features', between='Impairment Group'))
+#
+# for ii in range(n_features):
+#     print('all stat test',
+#           welch_anova_np(features[compensation_labels == 0, ii], features[compensation_labels == 1, ii]))
+# plt.tight_layout()
+# plt.savefig('box_plots2.pdf')
+# # plt.show()
 
 all_sub = np.asarray(all_sub)
 reach_retract_mask = np.asarray(reach_retract_mask)
@@ -231,13 +223,7 @@ print(len(all_sub), len(features))
 predicted = np.zeros(compensation_labels.shape)
 predicted_testscore = np.zeros(compensation_labels.shape)
 
-# r_grid = {'ne': [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000],
-#           'maxdepth': [None]}
-# print(r_grid)
-selnum_f_grid = [3, 4, 5, 6, 7]
-print(selnum_f_grid)
-num_comb = len(selnum_f_grid)
-print('total combination grid search', num_comb)
+# extract PCA features with LOSOCV manner
 pca_add_features = np.zeros((len(features), len(feature_names)+2))
 for s in subject_id:
     train_feats = features[all_sub != s, :]
@@ -251,9 +237,11 @@ feature_names = np.append(feature_names, 'pca0')
 feature_names = np.append(feature_names, 'pca1')
 print(feature_names.shape, pca_add_features.shape)
 
+# SVM hyperparameter range
 C_set = np.logspace(-3, 2, 6)
 gamma_set = np.logspace(-3, 2, 6)
 
+# LOSOCV (train and test)
 for s in subject_id:
     start_time = time.time()
 
@@ -267,43 +255,32 @@ for s in subject_id:
     train_feats = scaler.transform(train_feats)
     test_feats = scaler.transform(test_feats)
 
-    # pca = PCA(n_components=2).fit(train_feats)
-    # pca_train_feats = pca.transform(train_feats)
-    # pca_test_feats = pca.transform(test_feats)
-    #
-    # train_feats = np.concatenate((train_feats, pca_train_feats), axis=1)
-    # test_feats = np.concatenate((test_feats, pca_test_feats), axis=1)
-
     inner_subject_id = subject_id.copy()
     inner_subject_id = np.delete(inner_subject_id, np.argwhere(inner_subject_id == s))
 
-    val_scores = np.zeros(num_comb)
     print('testing!!!!!!', s)
 
-    # selector = CFS(rfunc=spearmanr).fit(train_feats, train_labels, method='forward')
-    # train_feats = selector.transform(train_feats)
-    # test_feats = selector.transform(test_feats)
-    # print(feature_names[selector.selected_features])
-
-    # kernel = 1.0 * RBF(1.0)
-    # model = GaussianProcessClassifier(kernel=kernel, random_state=0, n_restarts_optimizer=10, max_iter_predict=100)
+    # Gaussian classifier
+    kernel = 1.0 * RBF(1.0)
+    model = GaussianProcessClassifier(kernel=kernel, random_state=0, n_restarts_optimizer=10, max_iter_predict=100)
+    # # Random forest
     # model = RandomForestClassifier(n_estimators=500, random_state=0)
-    clf2 = GridSearchCV(SVC(kernel='linear'), {'C': C_set}, cv=5, n_jobs=-1, refit=False)
-    clf2.fit(train_feats, train_labels)
-    print('C: ', clf2.best_params_['C'])
-    model = SVC(kernel='linear', C=clf2.best_params_['C'], probability=True).fit(train_feats, train_labels)
+    # # linear SVM
+    # clf2 = GridSearchCV(SVC(kernel='linear'), {'C': C_set}, cv=5, n_jobs=-1, refit=False)
+    # clf2.fit(train_feats, train_labels)
+    # print('C: ', clf2.best_params_['C'])
+    # model = SVC(kernel='linear', C=clf2.best_params_['C'], probability=True).fit(train_feats, train_labels)
+    # # SVM with rbf kernel
     # clf2 = GridSearchCV(SVC(kernel='rbf'), {'C': C_set, 'gamma': gamma_set}, cv=5, n_jobs=-1, refit=False)
     # clf2.fit(train_feats, train_labels)
     # print('C: ', clf2.best_params_['C'], 'gamma: ', clf2.best_params_['gamma'])
     # model = SVC(kernel='rbf', C=clf2.best_params_['C'], gamma=clf2.best_params_['gamma'], probability=True).fit(train_feats, train_labels)
-
 
     model.fit(train_feats, train_labels)
     predicted[all_sub == s] = model.predict(test_feats)
     predicted_testscore[all_sub == s] = model.predict_proba(test_feats)[:, 1]
     print(s, 'acc: ', accuracy_score(test_labels, predicted[all_sub == s]))
     print('elapsed time:', time.time() - start_time)
-
 
 
 print(compensation_labels)
@@ -319,22 +296,10 @@ print('global F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, 
 fig_conf = plt.figure(figsize=[6, 6])
 ax1 = fig_conf.add_subplot(1, 1, 1)
 plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'], normalize=True)
-# ax1.set_title('Total')
-# ax2 = fig_conf.add_subplot(1, 3, 2)
-# plot_confusion_matrix(ax2, compensation_labels[reach_retract_mask], predicted[reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
-# ax2.set_title('Reaching')
-# ax3 = fig_conf.add_subplot(1, 3, 3)
-# plot_confusion_matrix(ax3, compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
-# ax3.set_title('Retracting')
 fig_conf.tight_layout()
-fig_conf.savefig('confusion_matrix_rf_2class_nofiltadd_test2')
-np.save('gp_3class_linearsvm', predicted)
-np.save('gp_3class_score_linearsvm', predicted_testscore)
-
-
-
-# print('Reaching Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[reach_retract_mask], predicted[reach_retract_mask]) * 100))
-# print('Retracting Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask]) * 100))
+fig_conf.savefig('confusion_matrix_gp_before_adjust_thres')
+np.save('gp_prediction', predicted)
+np.save('gp_prediction_probability', predicted_testscore)
 
 # Compute ROC curve and ROC area for each class
 fpr, tpr, thresholds = roc_curve(compensation_labels, predicted_testscore)
@@ -345,5 +310,5 @@ roc_ax.plot(fpr, tpr, color='red', lw=3, label='ROC curve (area = %0.2f)' % roc_
 roc_ax.plot(fpr, thresholds, markeredgecolor='b',linestyle='dashed', color='b')
 plt.legend()
 plt.ylim(0, 1)
-roc_fig.savefig('roc_rf_2class_nofiltadd_test2')
+roc_fig.savefig('roc_gp_before_adjust_thres')
 plt.show()

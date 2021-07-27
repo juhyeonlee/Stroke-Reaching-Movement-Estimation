@@ -26,13 +26,6 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     hoff = 30 * np.power(ts_idx, 4) - 60 * np.power(ts_idx, 3) + 30 * np.power(ts_idx, 2)
     homog_mean = np.pi / 2 * np.sin(np.pi * ts_idx)
 
-
-    # it's okay to remove this !!!!!
-    # if z is False:
-    #     feat.append(np.log(float(len(ts))))
-    #     feature_names.append(prefix + 'logdur')
-    #!!!!!!!!!!
-
     # feat.append(float(np.argmax(ts)))
     # feature_names.append(prefix + 'peakloc')
     #

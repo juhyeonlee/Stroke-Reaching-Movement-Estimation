@@ -7,11 +7,13 @@ Using reaching / retracting 2D movement data with one wrist sensor (affected sid
 
 **Code Description**
 -
-- data_struct.py: class of the data structure
+Main codes
 - load_data.py: load data and put data aligned with the data structure
 - plot_raw_acc_vel_pos.py: preprocess data and visualize
-- extract_features.py: the function extracting features
-- classify_Gaussian.py: extract features and classify with Gaussian process classifier
-- classify.py: extract features and classify with features selection and SVM
+- classify.py: extract features and classify with different classifiers
 - roc_curve.py: draw roc curve and find an operating point
+
+Function codes
+- data_struct.py: class of the data structure
+- extract_features.py: the function extracting features
 - utils.py: mics. functions

@@ -20,6 +20,7 @@ subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
 save_data_file = open('sub_data.p', 'rb')
 sub_data = pickle.load(save_data_file)
 
+## compute label distribution
 # dd = []
 # ll = []
 # for ii in subject_id:
