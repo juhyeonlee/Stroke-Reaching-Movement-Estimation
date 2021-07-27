@@ -52,6 +52,7 @@ for sub_id in subject_id:
         acc_retract_filt = filtfilt(b_lp, a_lp, acc_affect_fore_retract[ii], axis=0)
         acc_reach_filt = acc_reach_filt - acc_reach_filt.mean(axis=0)
         acc_retract_filt = acc_retract_filt - acc_retract_filt.mean(axis=0)
+        print(acc_reach_filt.mean(axis=0))
 
         vel_reach = cumtrapz(acc_reach_filt, dx=dx, axis=0, initial=0)
         vel_retract = cumtrapz(acc_retract_filt, dx=dx, axis=0, initial=0)
@@ -64,17 +65,29 @@ for sub_id in subject_id:
 
         mvel_xy_reach = magnitude_xy(vel_reach_filt)
         mvel_xy_retract = magnitude_xy(vel_retract_filt)
-        mvel_xy_reach_comp[comp_reach[ii]].append(mvel_xy_reach)
-        mvel_xy_retract_comp[comp_retract[ii]].append(mvel_xy_retract)
 
-        reach_len.append(len(mvel_xy_reach))
-        reach_len_comp[comp_reach[ii]].append(len(mvel_xy_reach))
-        retract_len.append(len(mvel_xy_retract))
-        retract_len_comp[comp_retract[ii]].append(len(mvel_xy_retract))
-        reach_angle[comp_reach[ii]].append(int(np.logical_xor(sub_data[sub_id].affect_side == 1,
-                                                              sub_data[sub_id].target_angle[ii] >= 0)))
-        retract_angle[comp_retract[ii]].append(int(np.logical_xor(sub_data[sub_id].affect_side == 1,
-                                                              sub_data[sub_id].target_angle[ii] >= 0)))
+        if sub_id >= 10:
+            plt.figure()
+            plt.title('magnitude of velocity id: {} / angle: {}  / dist: {}/ reach {} / retract {}'.format(
+                sub_id, sub_data[sub_id].target_angle[ii], sub_data[sub_id].target_dist[ii], comp_reach[ii], comp_retract[ii]))
+            plt.plot(np.hstack((mvel_xy_reach, mvel_xy_retract)))
+            plt.axvline(len(mvel_xy_reach), color='k', linestyle='--')
+            plt.show()
+
+        if sub_id == 2 and sub_data[sub_id].target_angle[ii] == 40 and sub_data[sub_id].target_dist[ii] == 20:
+            print('hmm')
+        else:
+            mvel_xy_reach_comp[comp_reach[ii]].append(mvel_xy_reach)
+            mvel_xy_retract_comp[comp_retract[ii]].append(mvel_xy_retract)
+
+            reach_len.append(len(mvel_xy_reach))
+            reach_len_comp[comp_reach[ii]].append(len(mvel_xy_reach))
+            retract_len.append(len(mvel_xy_retract))
+            retract_len_comp[comp_retract[ii]].append(len(mvel_xy_retract))
+        # reach_angle[comp_reach[ii]].append(int(np.logical_xor(sub_data[sub_id].affect_side == 1,
+        #                                                       sub_data[sub_id].target_angle[ii] >= 0)))
+        # retract_angle[comp_retract[ii]].append(int(np.logical_xor(sub_data[sub_id].affect_side == 1,
+        #                                                       sub_data[sub_id].target_angle[ii] >= 0)))
 
     # fig_vel_mag_reach = plt.figure(figsize=[15, 10])
     # fig_vel_mag_retract = plt.figure(figsize=[15, 10])
@@ -88,13 +101,13 @@ for sub_id in subject_id:
     #     for ii in range(len(mvel_xy_reach_comp[comp])):
     #     # for ii in range(100):
     #           reach_mvel_xy_df = reach_mvel_xy_df.append(
-    #             pd.DataFrame({"t": np.arange(len(mvel_xy_reach_comp[comp][ii])), "vel": mvel_xy_reach_comp[comp][ii], "color": color[reach_angle[comp][ii]], "index": ii}))
+    #             pd.DataFrame({"t": np.arange(len(mvel_xy_reach_comp[comp][ii])), "vel": mvel_xy_reach_comp[comp][ii], "index": ii}))
     #
     #     for ii in range(len(mvel_xy_retract_comp[comp])):
     #     # for ii in range(64):
     #         retract_mvel_xy_df = retract_mvel_xy_df.append(
     #             pd.DataFrame(
-    #                 {"t": np.arange(len(mvel_xy_retract_comp[comp][ii])), "vel": mvel_xy_retract_comp[comp][ii], "color": color[retract_angle[comp][ii]], "index": ii}))
+    #                 {"t": np.arange(len(mvel_xy_retract_comp[comp][ii])), "vel": mvel_xy_retract_comp[comp][ii], "index": ii}))
     #
     #     reach_mvel_xy_ax = fig_vel_mag_reach.add_subplot(4, 1, comp + 1)
     #     reach_mvel_xy_ax.set_title('reach comp level {}'.format(comp))
@@ -111,7 +124,7 @@ for sub_id in subject_id:
     #         sns.lineplot(x="t", y="vel", data=retract_mvel_xy_df, estimator=None, units='index', hue='index', legend=False,
     #                           ax=retract_mvel_xy_ax, palette="ch:2.5,.25")
     #
-    # # plt.show()
+    # plt.show()
     # plt.tight_layout()
     # fig_vel_mag_reach.savefig('whole_ts_{}_{}to{}_scale/reach_per_sub_{}'.format(f_lp, f_bp_l, f_bp_h, sub_id))
     # fig_vel_mag_retract.savefig('whole_ts_{}_{}to{}_scale/retract_per_sub_{}'.format(f_lp, f_bp_l, f_bp_h, sub_id))
@@ -139,9 +152,9 @@ for comp in range(4):
     print('std rt', np.std(retract_len_comp[comp]))
 
     plt.tight_layout()
-hist_len.savefig('reach_retract_len_comp_all')
-
-save_data_file = open('sub_data_filt_ok.p', 'wb')
-pickle.dump(sub_data, save_data_file)
+# hist_len.savefig('reach_retract_len_comp_all')
+#
+# save_data_file = open('sub_data_filt_ok.p', 'wb')
+# pickle.dump(sub_data, save_data_file)
 
 

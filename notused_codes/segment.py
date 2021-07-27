@@ -8,10 +8,11 @@ from scipy.signal import butter, filtfilt, resample, find_peaks, peak_prominence
 from scipy.stats import pearsonr, spearmanr, skew, kurtosis, linregress
 from sklearn.feature_selection import SelectKBest, f_classif, f_regression, RFE
 import seaborn as sns
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report
 from sklearn.ensemble import RandomForestClassifier
 
-from utils import magnitude, rms, ExhaustiveForwardSelect, efs_score, plot_confusion_matrix
+from utils import magnitude, rms, ExhaustiveForwardSelect, efs_score, plot_confusion_matrix, \
+    extract_primary_mag, extract_full_mvmt, magnitude_xy
 from data_struct import CompData
 
 
@@ -22,8 +23,13 @@ direction = ["L", "R"]
 # list subject ID
 subject_id = np.arange(0, num_subjects) + 1
 subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
+# subject_id = np.array([1, 5, 8, 9, 10, 11, 12, 17])
+# with mft
+subject_id = np.delete(subject_id, np.argwhere(subject_id == 3))
+subject_id = np.delete(subject_id, np.argwhere(subject_id == 15))
+subject_id = np.delete(subject_id, np.argwhere(subject_id == 6))
 
-save_data_file = open('sub_data_filt.p', 'rb')
+save_data_file = open('sub_data_filt_ok.p', 'rb')
 sub_data = pickle.load(save_data_file)
 
 fs = 100
@@ -39,7 +45,10 @@ for sub_id in subject_id:
     vel_affect_fore_retract = sub_data[sub_id].vel_affect_fore_retract
     for ii in range(len(vel_affect_fore_reach)):
         feat = []
-        mvel_reach = magnitude(vel_affect_fore_reach[ii])
+        mvel_reach = magnitude_xy(vel_affect_fore_reach[ii])
+
+        seg_reach_i, seg_reach_f = extract_primary_mag(mvel_reach)[0]
+        mvel_reach = mvel_reach[seg_reach_i:seg_reach_f]
 
         mvel_norm_reach = mvel_reach / mvel_reach.mean()
 
@@ -99,13 +108,21 @@ for sub_id in subject_id:
         feat.append(np.var(mvel_reach))
 
         features.append(feat)
-        print(len(feat))
 
-    compensation_labels.extend(sub_data[sub_id].reach_comp_label)
+    for ll in range(len(sub_data[sub_id].reach_comp_score)):
+        if sub_data[sub_id].reach_comp_score[ll] == 1 or sub_data[sub_id].reach_comp_score[ll] == 2:
+            sub_data[sub_id].reach_comp_score[ll] = 1
+        elif sub_data[sub_id].reach_comp_score[ll] == 3:
+            sub_data[sub_id].reach_comp_score[ll] = 2
+
+    compensation_labels.extend(sub_data[sub_id].reach_comp_score)
+    print(compensation_labels)
 
     for ii in range(len(vel_affect_fore_retract)):
         feat = []
-        mvel_retract = magnitude(vel_affect_fore_retract[ii])
+        mvel_retract = magnitude_xy(vel_affect_fore_retract[ii])
+        seg_retract_i, seg_retract_f = extract_primary_mag(mvel_retract)[0]
+        mvel_retract = mvel_retract[seg_retract_i:seg_retract_f]
 
         mvel_norm_retract = mvel_retract / mvel_retract.mean()
 
@@ -133,7 +150,6 @@ for sub_id in subject_id:
         feat.append(rms(hoff - mvel_retract))
 
         feat.append(rms(homog_mean - mvel_retract))
-
 
         peaks_retract, _ = find_peaks(np.absolute(mvel_retract))
         prominences_retract, *_ = peak_prominences(np.absolute(mvel_retract), peaks_retract)
@@ -165,8 +181,14 @@ for sub_id in subject_id:
         feat.append(np.var(mvel_retract))
 
         features.append(feat)
-        print(len(feat))
-    compensation_labels.extend(sub_data[sub_id].retract_comp_label)
+
+    for ll in range(len(sub_data[sub_id].retract_comp_score)):
+        if sub_data[sub_id].retract_comp_score[ll] == 1 or sub_data[sub_id].retract_comp_score[ll] == 2:
+            sub_data[sub_id].retract_comp_score[ll] = 1
+        elif sub_data[sub_id].retract_comp_score[ll] == 3:
+            sub_data[sub_id].retract_comp_score[ll] = 2
+
+    compensation_labels.extend(sub_data[sub_id].retract_comp_score)
 
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 features = np.asarray(features)
@@ -186,6 +208,7 @@ reach_subj = np.asarray(reach_subj)
 
 predicted = np.zeros(compensation_labels.shape)
 for s in subject_id:
+    # check error!!!! cuz... you should check the retract subj..
     train_feats = features[reach_subj != s, :]
     train_labels = compensation_labels[reach_subj != s]
     test_feats = features[reach_subj == s, :]
@@ -201,18 +224,21 @@ for s in subject_id:
     train_feats = fsel.transform(train_feats)
     test_feats = fsel.transform(test_feats)
 
-    #     model = RandomForestClassifier(n_estimators=100, random_state=0, class_weight='balanced').fit(train_feats, train_labels)
+    # model = RandomForestClassifier(n_estimators=100, random_state=0, class_weight='balanced').fit(train_feats, train_labels)
     model = SVC(random_state=0, class_weight='balanced', gamma='scale').fit(train_feats, train_labels)
     predicted[reach_subj == s] = model.predict(test_feats)
 
-print(compensation_labels)
-print(predicted)
 fig = plt.figure()
 ax = fig.add_subplot(111)
 plot_confusion_matrix(ax, compensation_labels, predicted, ['Normal', 'Compensation'], normalize=True)
 
 print('Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
-print('F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='macro')))
+print(classification_report(compensation_labels, predicted))
+print('weighted per class F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='weighted')))
+print('unweighted per class F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='macro')))
+print('global F1 Score: {:.2f}'.format(f1_score(compensation_labels, predicted, average='micro')))
+
+
 fig.savefig('confusion_matrix_svm')
 
 # fig_acc = plt.figure()

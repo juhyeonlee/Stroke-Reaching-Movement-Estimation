@@ -3,33 +3,21 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
-from sklearn.svm import SVC
+from sklearn.svm import SVC, SVR
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold
-from sklearn.linear_model import Lasso, LinearRegression, Ridge
 from scipy.signal import resample
-from scipy.stats import pearsonr, spearmanr
 from sklearn.feature_selection import SelectKBest, f_classif, f_regression, RFE
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, classification_report, roc_curve, auc
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, RandomForestRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.decomposition import PCA
-import pandas as pd
-from pingouin import welch_anova, pairwise_gameshowell, homoscedasticity, kruskal, normality
-from utils import welch_anova_np, plot_correlation_matrix
-import matplotlib as mpl
-mpl.rcParams['pdf.fonttype'] = 42
-
 from ReliefF import ReliefF
 import seaborn as sns
 
-sns.set()
-sns.set_context('talk')
-plt.rcParams["patch.force_edgecolor"] = False  # Turn off histogram borders
-
 from extract_features import extract_features
 from data_struct import CompData
-from utils import ExhaustiveForwardSelect, efs_score, plot_confusion_matrix, magnitude_xy, CFS
+from utils import ExhaustiveForwardSelect, efs_score, plot_confusion_matrix, magnitude_xy, CFS, regression_performance
 import time
 
 
@@ -80,7 +68,7 @@ for sub_id in subject_id:
         mvel_xy_reach_norm = resample(mvel_xy_reach / np.mean(mvel_xy_reach), resample_num, np.arange(len(mvel_xy_reach)))[0]
 
         feat, feature_names = extract_features(mvel_xy_reach, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
-        # feat_z, feature_names_z = extract_features(mvel_z_reach, None, z=True, fs=100, prefix='velfilt_z_')
+        feat_z, feature_names_z = extract_features(mvel_z_reach, None, z=True, fs=100, prefix='velfilt_z_')
         # feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
         feat_acc, feature_names_acc = extract_features(macc_xy_reach, None, z=True, fs=100, prefix='acc_')
 
@@ -95,17 +83,15 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_reach[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat + feat_acc) # + feat_acc)
+        features.append(feat + feat_z + feat_acc)
         all_sub.append(sub_id)
         reach_retract_mask.append(True)
 
-    for ll in range(len(sub_data[sub_id].reach_fas_score)):
-        if sub_data[sub_id].reach_fas_score[ll] == 5: # or sub_data[sub_id].reach_fas_score[ll] == 4:
-        #     sub_data[sub_id].reach_fas_score[ll] = 2
-        # elif sub_data[sub_id].reach_fas_score[ll] == 3 or sub_data[sub_id].reach_fas_score[ll] == 2:
-            sub_data[sub_id].reach_fas_score[ll] = 1
-        else:
-            sub_data[sub_id].reach_fas_score[ll] = 0
+    # for ll in range(len(sub_data[sub_id].reach_fas_score)):
+    #     if sub_data[sub_id].reach_fas_score[ll] == 5: #or sub_data[sub_id].reach_fas_score[ll] == 4:
+    #         sub_data[sub_id].reach_fas_score[ll] = 1
+    #     else: # elif sub_data[sub_id].reach_fas_score[ll] != 5: #or sub_data[sub_id].reach_comp_score[ll] == 2:
+    #         sub_data[sub_id].reach_fas_score[ll] = 0
 
     compensation_labels.extend(sub_data[sub_id].reach_fas_score)
 
@@ -154,9 +140,9 @@ for sub_id in subject_id:
     #     print(np.mean(kkk[np.where(dfd == 1)[0]], axis=0))
 
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
-features = np.array(features)
+features = np.asarray(features)
 print(features.shape)
-feature_names = np.asarray(feature_names + feature_names_acc) #feature_names_z + feature_names_acc)
+feature_names = np.asarray(feature_names + feature_names_z + feature_names_acc)
 
 print('the number of features', len(feature_names))
 print('comp0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where(compensation_labels == 1)[0]),
@@ -167,62 +153,6 @@ print('comp0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where
 # for s in subject_id:
 #     all_sub.extend([s] * len(sub_data[s].velfilt_affect_fore_reach))
 #     all_sub.extend([s] * len(sub_data[s].velfilt_affect_fore_retract))
-n_features = features.shape[1]
-corrs = np.zeros((n_features,))
-pval = np.zeros((n_features,))
-for i in range(n_features):
-    corrs[i], pval[i] = pearsonr(features[:, i], compensation_labels)
-sorted_corrs = np.flip(np.argsort(np.absolute(corrs)), 0)
-for i in sorted_corrs:
-    print('{:+.2f} {} {} {:.5f}'.format(corrs[i], i, feature_names[i], pval[i]))
-for i in range(n_features):
-    print(feature_names[i], pearsonr(features[:, i], features[:, 14]))
-
-inter_corrs = np.zeros((n_features, n_features))
-for i in range(n_features):
-    for j in range(n_features):
-        inter_corrs[i, j] = pearsonr(features[:, i], features[:, j])[0]
-
-# plt.figure()
-# plot_correlation_matrix(inter_corrs, feature_names, feature_names)
-# plt.show()
-
-
-sel_f=[0, 6, 2]
-# sel_name = ['Log number of peaks \n(velocity)', 'log number of frequency components \n(velocity)',
-#             'Log number of frequency components \n(acceleration)',
-#             'Ratio of the log number of frequency components \nto log duration (velocity)',
-#             'Ratio of the log number of frequency components \nto log duration (acceleration)']
-fig_box = plt.figure(figsize=[25, 5])
-for idx, sel in enumerate(sel_f):
-    stats_dataframe = pd.DataFrame({
-        'Impairment Group': np.hstack([np.array([i for i in compensation_labels])]),
-        'features': np.hstack([np.array([i for i in features[:, sel]])])
-    })
-    ax = fig_box.add_subplot(1, 5, idx+1)
-    data = [features[compensation_labels==0, sel],  features[compensation_labels==1, sel]]
-    print('median', np.median(features[compensation_labels==0, sel]), np.median(features[compensation_labels==1, sel]))
-    ax.boxplot(data)
-    ax.set_xticklabels(['Desirable', 'Undesirable'])
-    # sns.kdeplot(features[compensation_labels==0, sel], legend='Abnormal')
-    # sns.kdeplot(features[compensation_labels==1, sel], legend='Normal')
-    # plt.legend()
-    # plt.title(sel_name[idx])
-    # print('all stat test', welch_anova(stats_dataframe, dv='features', between='Impairment Group'))
-    print('all stat test', welch_anova_np(features[compensation_labels==0, sel],  features[compensation_labels==1, sel]))
-    # print('all stat test - kruskal', kruskal(stats_dataframe, dv='features', between='Impairment Group'))
-    # print('pair', pairwise_gameshowell(stats_dataframe, dv='features', between='Impairment Group'))
-
-for ii in range(n_features):
-    print('all stat test',
-          welch_anova_np(features[compensation_labels == 0, ii], features[compensation_labels == 1, ii]))
-plt.tight_layout()
-plt.savefig('box_plots2.pdf')
-# plt.show()
-
-
-
-
 
 
 all_sub = np.asarray(all_sub)
@@ -231,13 +161,12 @@ print(len(all_sub), len(features))
 predicted = np.zeros(compensation_labels.shape)
 predicted_testscore = np.zeros(compensation_labels.shape)
 
-# r_grid = {'ne': [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000],
-#           'maxdepth': [None]}
-# print(r_grid)
-selnum_f_grid = [3, 4, 5, 6, 7]
-print(selnum_f_grid)
-num_comb = len(selnum_f_grid)
+r_grid = {'ne': [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000],
+          'maxdepth': [None]}
+print(r_grid)
+num_comb = len(r_grid['ne'])
 print('total combination grid search', num_comb)
+
 pca_add_features = np.zeros((len(features), len(feature_names)+2))
 for s in subject_id:
     train_feats = features[all_sub != s, :]
@@ -250,9 +179,6 @@ for s in subject_id:
 feature_names = np.append(feature_names, 'pca0')
 feature_names = np.append(feature_names, 'pca1')
 print(feature_names.shape, pca_add_features.shape)
-
-C_set = np.logspace(-3, 2, 6)
-gamma_set = np.logspace(-3, 2, 6)
 
 for s in subject_id:
     start_time = time.time()
@@ -267,83 +193,51 @@ for s in subject_id:
     train_feats = scaler.transform(train_feats)
     test_feats = scaler.transform(test_feats)
 
-    # pca = PCA(n_components=2).fit(train_feats)
-    # pca_train_feats = pca.transform(train_feats)
-    # pca_test_feats = pca.transform(test_feats)
-    #
-    # train_feats = np.concatenate((train_feats, pca_train_feats), axis=1)
-    # test_feats = np.concatenate((test_feats, pca_test_feats), axis=1)
-
     inner_subject_id = subject_id.copy()
     inner_subject_id = np.delete(inner_subject_id, np.argwhere(inner_subject_id == s))
 
-    val_scores = np.zeros(num_comb)
-    print('testing!!!!!!', s)
+    # val_scores = np.zeros(num_comb)
+    # j = 0
+    # for n_e in r_grid['ne']:
+    #     predicted_val = np.zeros(len(train_labels))
+    #     for i_s in inner_subject_id:
+    #         inner_train_feats = features[np.logical_and(all_sub != s, all_sub != i_s), :]
+    #         # inner_train_feats = train_feats[train_sub != i_s, :]
+    #         inner_train_labels = compensation_labels[np.logical_and(all_sub != s, all_sub != i_s)]
+    #         val_feats = features[all_sub == i_s, :]
+    #         # val_feats = train_feats[train_sub == i_s, :]
+    #         val_labels = compensation_labels[all_sub == i_s]
+    #
+    #         scaler_inner = RobustScaler().fit(inner_train_feats)
+    #         inner_train_feats = scaler_inner.transform(inner_train_feats)
+    #         val_feats = scaler_inner.transform(val_feats)
+    #
+    #         val_model = RandomForestClassifier(n_estimators=n_e, random_state=0)
+    #         val_model.fit(inner_train_feats, inner_train_labels)
+    #         predicted_val[train_sub == i_s] = val_model.predict(val_feats)
+    #     val_scores[j] = accuracy_score(train_labels, predicted_val)
+    #     j += 1
+    # best_ne = r_grid['ne'][int(np.argmax(val_scores))]
+    # print(np.max(val_scores), best_ne)
 
-    # selector = CFS(rfunc=spearmanr).fit(train_feats, train_labels, method='forward')
-    # train_feats = selector.transform(train_feats)
-    # test_feats = selector.transform(test_feats)
-    # print(feature_names[selector.selected_features])
-
-    # kernel = 1.0 * RBF(1.0)
-    # model = GaussianProcessClassifier(kernel=kernel, random_state=0, n_restarts_optimizer=10, max_iter_predict=100)
-    # model = RandomForestClassifier(n_estimators=500, random_state=0)
-    clf2 = GridSearchCV(SVC(kernel='linear'), {'C': C_set}, cv=5, n_jobs=-1, refit=False)
-    clf2.fit(train_feats, train_labels)
-    print('C: ', clf2.best_params_['C'])
-    model = SVC(kernel='linear', C=clf2.best_params_['C'], probability=True).fit(train_feats, train_labels)
-    # clf2 = GridSearchCV(SVC(kernel='rbf'), {'C': C_set, 'gamma': gamma_set}, cv=5, n_jobs=-1, refit=False)
-    # clf2.fit(train_feats, train_labels)
-    # print('C: ', clf2.best_params_['C'], 'gamma: ', clf2.best_params_['gamma'])
-    # model = SVC(kernel='rbf', C=clf2.best_params_['C'], gamma=clf2.best_params_['gamma'], probability=True).fit(train_feats, train_labels)
-
+    # kernel = 1.0 * RBF(1.0) + WhiteKernel()
+    # model = GaussianProcessRegressor(kernel=kernel, normalize_y=True, n_restarts_optimizer=10, alpha=0)
+    model = RandomForestRegressor(n_estimators=400, random_state=0)
+    # model = SVR(C= 10, gamma='auto', kernel='rbf')
 
     model.fit(train_feats, train_labels)
     predicted[all_sub == s] = model.predict(test_feats)
-    predicted_testscore[all_sub == s] = model.predict_proba(test_feats)[:, 1]
-    print(s, 'acc: ', accuracy_score(test_labels, predicted[all_sub == s]))
+    # predicted_testscore[all_sub == s] = model.predict_proba(test_feats)[:, 1]
+    # print(s, 'acc: ', accuracy_score(test_labels, predicted[all_sub == s]))
     print('elapsed time:', time.time() - start_time)
 
 
 
 print(compensation_labels)
 print(predicted)
-print(predicted_testscore)
-
-print('Accuracy: {:.3f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
-print(classification_report(compensation_labels, predicted))
-print('weighted per class F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='weighted')))
-print('unweighted per class F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='macro')))
-print('global F1 Score: {:.3f}'.format(f1_score(compensation_labels, predicted, average='micro')))
-
-fig_conf = plt.figure(figsize=[6, 6])
-ax1 = fig_conf.add_subplot(1, 1, 1)
-plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'], normalize=True)
-# ax1.set_title('Total')
-# ax2 = fig_conf.add_subplot(1, 3, 2)
-# plot_confusion_matrix(ax2, compensation_labels[reach_retract_mask], predicted[reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
-# ax2.set_title('Reaching')
-# ax3 = fig_conf.add_subplot(1, 3, 3)
-# plot_confusion_matrix(ax3, compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
-# ax3.set_title('Retracting')
-fig_conf.tight_layout()
-fig_conf.savefig('confusion_matrix_rf_2class_nofiltadd_test2')
-np.save('gp_3class_linearsvm', predicted)
-np.save('gp_3class_score_linearsvm', predicted_testscore)
-
-
-
-# print('Reaching Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[reach_retract_mask], predicted[reach_retract_mask]) * 100))
-# print('Retracting Accuracy: {:.1f}%'.format(accuracy_score(compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask]) * 100))
-
-# Compute ROC curve and ROC area for each class
-fpr, tpr, thresholds = roc_curve(compensation_labels, predicted_testscore)
-roc_auc = auc(fpr, tpr)
-roc_fig = plt.figure()
-roc_ax = roc_fig.add_subplot(1, 1, 1)
-roc_ax.plot(fpr, tpr, color='red', lw=3, label='ROC curve (area = %0.2f)' % roc_auc)
-roc_ax.plot(fpr, thresholds, markeredgecolor='b',linestyle='dashed', color='b')
-plt.legend()
-plt.ylim(0, 1)
-roc_fig.savefig('roc_rf_2class_nofiltadd_test2')
+fig_reg = plt.figure(figsize=[6, 6])
+ax1 = fig_reg.add_subplot(1, 1, 1)
+r2, rmse, nrmse = regression_performance(compensation_labels, predicted, ax=ax1)
+print('r2:', r2, 'rmse', rmse, 'nrmse', nrmse)
+np.save('gp_5class_regress_test', predicted)
 plt.show()

@@ -11,8 +11,9 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report, dav
 from sklearn.ensemble import RandomForestClassifier
 from ReliefF import ReliefF
 # from skfeature.function.statistical_based import CFS
-from skfeature.function.information_theoretical_based import FCBF
+# from skfeature.function.information_theoretical_based import FCBF
 import seaborn as sns
+from sklearn.decomposition import PCA
 
 from extract_features import extract_features
 from data_struct import CompData
@@ -29,11 +30,13 @@ n_classes = 2
 subject_id = np.arange(0, num_subjects) + 1
 subject_id = np.delete(subject_id, np.argwhere(subject_id == exclude_sub_num))
 # with mft
-subject_id = np.delete(subject_id, np.argwhere(subject_id == 3))
-subject_id = np.delete(subject_id, np.argwhere(subject_id == 15))
-subject_id = np.delete(subject_id, np.argwhere(subject_id == 6))
+# subject_id = np.delete(subject_id, np.argwhere(subject_id == 3))
+# subject_id = np.delete(subject_id, np.argwhere(subject_id == 15))
+# subject_id = np.delete(subject_id, np.argwhere(subject_id == 6))
 # # exclude 5?
 # subject_id = np.delete(subject_id, np.argwhere(subject_id == 5))
+# subject_id = np.delete(subject_id, np.argwhere(subject_id == 12))
+
 
 # subject_id = np.array([1, 5, 8, 9, 10, 11, 12, 17])
 
@@ -56,16 +59,20 @@ for sub_id in subject_id:
     vel_affect_fore_retract = sub_data[sub_id].vel_affect_fore_retract
     free_acc_affect_fore_reach = sub_data[sub_id].free_acc_affect_fore_reach
     free_acc_affect_fore_retract = sub_data[sub_id].free_acc_affect_fore_retract
+    target_dist = sub_data[sub_id].target_dist
+    print(len(velfilt_affect_fore_reach))
     for ii in range(len(velfilt_affect_fore_reach)):
         mvel_xy_reach = magnitude_xy(velfilt_affect_fore_reach[ii])
         mvelnofilt_xy_reach = magnitude_xy(vel_affect_fore_reach[ii])
-        macc_xy_reach = magnitude_xy(np.gradient(free_acc_affect_fore_reach[ii], dx, axis=0))
+        macc_xy_reach = magnitude_xy(free_acc_affect_fore_reach[ii])
+        mvel_z_reach = np.sqrt(np.square(velfilt_affect_fore_reach[ii][:, 2]))
         # residual_reach = abs(mvelnofilt_xy_reach - mvel_xy_reach)
         mvel_xy_reach_norm = resample(mvel_xy_reach / np.mean(mvel_xy_reach), resample_num, np.arange(len(mvel_xy_reach)))[0]
 
         feat, feature_names = extract_features(mvel_xy_reach, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
+        feat_z, feature_names_z = extract_features(mvel_z_reach, None, z=True, fs=100, prefix='velfilt_z_')
         # feat2, feature_names2 = extract_features(mvelnofilt_xy_reach, None, fs=100, prefix='vel_')
-        # feat3, feature_names3 = extract_features(macc_xy_reach, None, fs=100, prefix='acc_')
+        feat_acc, feature_names_acc = extract_features(macc_xy_reach, None, z=True, fs=100, prefix='acc_')
 
         # feat3, feature_names3 = extract_features(residual_reach, None, fs=100, prefix='residual_')
 
@@ -78,51 +85,55 @@ for sub_id in subject_id:
         # feat.append(np.argmax(velfilt_affect_fore_reach[ii][:, 2]))
         # feature_names.append('zmaxdur')
 
-        features.append(feat)# + feat2)
+        features.append(feat + feat_z + feat_acc)
         all_sub.append(sub_id)
         reach_retract_mask.append(True)
 
-    for ll in range(len(sub_data[sub_id].reach_comp_score)):
-        if sub_data[sub_id].reach_comp_score[ll] == 3:
-            sub_data[sub_id].reach_comp_score[ll] = 1
-        elif sub_data[sub_id].reach_comp_score[ll] != 3: #or sub_data[sub_id].reach_comp_score[ll] == 2:
-            sub_data[sub_id].reach_comp_score[ll] = 0
+    for ll in range(len(sub_data[sub_id].reach_fas_score)):
+        if sub_data[sub_id].reach_fas_score[ll] == 5: #or sub_data[sub_id].reach_fas_score[ll] == 4:
+            sub_data[sub_id].reach_fas_score[ll] = 1
+        else: # elif sub_data[sub_id].reach_fas_score[ll] != 5: #or sub_data[sub_id].reach_comp_score[ll] == 2:
+            sub_data[sub_id].reach_fas_score[ll] = 0
 
-    compensation_labels.extend(sub_data[sub_id].reach_comp_score)
+    compensation_labels.extend(sub_data[sub_id].reach_fas_score)
 
-    for ii in range(len(velfilt_affect_fore_retract)):
-        mvel_xy_retract = magnitude_xy(velfilt_affect_fore_retract[ii])
-        mvelnofilt_xy_retract = magnitude_xy(vel_affect_fore_retract[ii])
-        macc_xy_retract = magnitude_xy(np.gradient(free_acc_affect_fore_retract[ii], dx, axis=0))
-        # residual_retract = abs(mvelnofilt_xy_retract - mvel_xy_retract)
-        mvel_xy_retract_norm = resample(mvel_xy_retract / np.mean(mvel_xy_retract), resample_num, np.arange(len(mvel_xy_retract)))[0]
-
-        feat, feature_names = extract_features(mvel_xy_retract, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
-        # feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
-        # feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
-
-        # feat3, feature_names3 = extract_features(residual_retract, None, fs=100, prefix='residual_')
-
-        # feat.append(0.)
-        # feature_names.append('reachretract')
-        #
-        # feat.append(np.max(velfilt_affect_fore_retract[ii][:, 2]))
-        # feature_names.append('zheight')
-        #
-        # feat.append(np.argmax(velfilt_affect_fore_retract[ii][:, 2]))
-        # feature_names.append('zmaxdur')
-
-        features.append(feat) # + feat2)
-        all_sub.append(sub_id)
-        reach_retract_mask.append(False)
-
-    for ll in range(len(sub_data[sub_id].retract_comp_score)):
-        if sub_data[sub_id].retract_comp_score[ll] == 3: #  or sub_data[sub_id].retract_comp_score[ll] == 2:
-            sub_data[sub_id].retract_comp_score[ll] = 1
-        elif sub_data[sub_id].retract_comp_score[ll] != 3: #or sub_data[sub_id].retract_comp_score[ll] == 2:
-            sub_data[sub_id].retract_comp_score[ll] = 0
-
-    compensation_labels.extend(sub_data[sub_id].retract_comp_score)
+    # for ii in range(len(velfilt_affect_fore_retract)):
+    #     mvel_xy_retract = magnitude_xy(velfilt_affect_fore_retract[ii])
+    #     mvelnofilt_xy_retract = magnitude_xy(vel_affect_fore_retract[ii])
+    #     macc_xy_retract = magnitude_xy(np.gradient(free_acc_affect_fore_retract[ii], dx, axis=0))
+    #     mvel_z_retract = np.sqrt(np.square(velfilt_affect_fore_retract[ii][:, 2]))
+    #
+    #     # residual_retract = abs(mvelnofilt_xy_retract - mvel_xy_retract)
+    #     mvel_xy_retract_norm = resample(mvel_xy_retract / np.mean(mvel_xy_retract), resample_num, np.arange(len(mvel_xy_retract)))[0]
+    #
+    #     feat, feature_names = extract_features(mvel_xy_retract, sub_data[sub_id].mft_score, fs=100, prefix='velfilt_')
+    #     feat_z, feature_names_z = extract_features(mvel_z_retract, None, z=True, fs=100, prefix='velfilt_z_')
+    #
+    #     # feat2, feature_names2 = extract_features(mvelnofilt_xy_retract, None, fs=100, prefix='vel_')
+    #     # feat3, feature_names3 = extract_features(macc_xy_retract, None, fs=100, prefix='acc_')
+    #
+    #     # feat3, feature_names3 = extract_features(residual_retract, None, fs=100, prefix='residual_')
+    #
+    #     # feat.append(0.)
+    #     # feature_names.append('reachretract')
+    #     #
+    #     # feat.append(np.max(velfilt_affect_fore_retract[ii][:, 2]))
+    #     # feature_names.append('zheight')
+    #     #
+    #     # feat.append(np.argmax(velfilt_affect_fore_retract[ii][:, 2]))
+    #     # feature_names.append('zmaxdur')
+    #
+    #     features.append(feat + feat_z)
+    #     all_sub.append(sub_id)
+    #     reach_retract_mask.append(False)
+    #
+    # for ll in range(len(sub_data[sub_id].retract_comp_score)):
+    #     if sub_data[sub_id].retract_comp_score[ll] == 3: #  or sub_data[sub_id].retract_comp_score[ll] == 2:
+    #         sub_data[sub_id].retract_comp_score[ll] = 1
+    #     elif sub_data[sub_id].retract_comp_score[ll] != 3: #or sub_data[sub_id].retract_comp_score[ll] == 2:
+    #         sub_data[sub_id].retract_comp_score[ll] = 0
+    #
+    # compensation_labels.extend(sub_data[sub_id].retract_comp_score)
 
     # if sub_id == 12:
     #     kkk = np.asarray(features)
@@ -133,7 +144,7 @@ for sub_id in subject_id:
 compensation_labels = np.asarray(compensation_labels).reshape(-1)
 features = np.asarray(features)
 print(features.shape)
-feature_names = np.asarray(feature_names) # + feature_names2)
+feature_names = np.asarray(feature_names + feature_names_z + feature_names_acc)
 
 print('the number of features', len(feature_names))
 print('comp 0', len(np.where(compensation_labels == 0)[0]), 'comp1', len(np.where(compensation_labels == 1)[0]), 'comp2',
@@ -150,27 +161,44 @@ print(len(all_sub), len(features))
 predicted = np.zeros(compensation_labels.shape)
 predicted_testscore = np.zeros(compensation_labels.shape)
 
+pca_add_features = np.zeros((len(features), len(feature_names)+2))
+for s in subject_id:
+    train_feats = features[all_sub != s, :]
+    test_feats = features[all_sub == s, :]
+
+    pca = PCA(n_components=2).fit(train_feats)
+    pca_feats = pca.transform(test_feats)
+
+    pca_add_features[all_sub == s, :] = np.concatenate((test_feats, pca_feats), axis=1)
+feature_names = np.append(feature_names, 'pca0')
+feature_names = np.append(feature_names, 'pca1')
+print(feature_names.shape, pca_add_features.shape)
+
 # p_grid ={'C': [0.001, 0.01, 0.1, 1, 10], 'gamma': [0.001, 0.01, 0.1, 1]}
 p_grid ={'C': [x for x in range(5, 21)], 'gamma': [1]} # better -> take long time
 # p_grid ={'C': [5, 10, 15, 20], 'gamma': [0.001]}
 r_grid = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
-selnum_f_grid = [3, 4, 5, 6, 7] #, 8, 9, 10] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
+selnum_f_grid = [3, 4, 5, 6, 7] #, 15, 20] #[int(x) for x in np.linspace(4, len(feature_names), num=10)]#
 print(p_grid, selnum_f_grid)
 num_comb = len(p_grid['C']) * len(p_grid['gamma']) * len(selnum_f_grid)
 print('total combination grid search', num_comb)
-# selnum_f = 17
 
-# features = features[:, [2, 32, 42]]
-# print(feature_names[[3, 33, 44, 48, 78]])
+# selnum_f = 17
+# #
+# features = features[:, [14, 44]]
+# feature_names = feature_names[[14, 44]]
+# print(feature_names)
+
 for s in subject_id:
     start_time = time.time()
 
-    train_feats = features[all_sub != s, :]
+    train_feats = pca_add_features[all_sub != s, :]
     train_labels = compensation_labels[all_sub != s]
-    test_feats = features[all_sub == s, :]
+    test_labels = compensation_labels[all_sub == s]
+    test_feats = pca_add_features[all_sub == s, :]
     train_sub = all_sub[all_sub != s]
 
-    scaler = RobustScaler().fit(train_feats)
+    scaler = MinMaxScaler().fit(train_feats)
     train_feats = scaler.transform(train_feats)
     test_feats = scaler.transform(test_feats)
 
@@ -186,51 +214,51 @@ for s in subject_id:
     print('testing!!!!!!', s)
 
     j = 0
-    for n_keep in selnum_f_grid:
-        for cval in p_grid['C']:
-            for gamval in p_grid['gamma']:
-                predicted_val = np.zeros(len(train_labels))
-                for i_s in inner_subject_id:
-                    inner_train_feats = features[np.logical_and(all_sub != s, all_sub != i_s), :]
-                    # inner_train_feats = train_feats[train_sub != i_s, :]
-                    inner_train_labels = compensation_labels[np.logical_and(all_sub != s, all_sub != i_s)]
-                    val_feats = features[all_sub == i_s, :]
-                    # val_feats = train_feats[train_sub == i_s, :]
-                    val_labels = compensation_labels[all_sub == i_s]
+    # for n_keep in selnum_f_grid:
+    for cval in p_grid['C']:
+        for gamval in p_grid['gamma']:
+            predicted_val = np.zeros(len(train_labels))
+            for i_s in inner_subject_id:
+                inner_train_feats = pca_add_features[np.logical_and(all_sub != s, all_sub != i_s), :]
+                # inner_train_feats = train_feats[train_sub != i_s, :]
+                inner_train_labels = compensation_labels[np.logical_and(all_sub != s, all_sub != i_s)]
+                val_feats = pca_add_features[all_sub == i_s, :]
+                # val_feats = train_feats[train_sub == i_s, :]
+                val_labels = compensation_labels[all_sub == i_s]
 
-                    scaler_inner = RobustScaler().fit(inner_train_feats)
-                    inner_train_feats = scaler_inner.transform(inner_train_feats)
-                    val_feats = scaler_inner.transform(val_feats)
+                scaler_inner = MinMaxScaler().fit(inner_train_feats)
+                inner_train_feats = scaler_inner.transform(inner_train_feats)
+                val_feats = scaler_inner.transform(val_feats)
 
-                    fsel = SelectKBest(f_classif, k=n_keep).fit(inner_train_feats, inner_train_labels)
-                    inner_train_feats = fsel.transform(inner_train_feats)
-                    val_feats = fsel.transform(val_feats)
+                # fsel = SelectKBest(f_classif, k=n_keep).fit(inner_train_feats, inner_train_labels)
+                # inner_train_feats = fsel.transform(inner_train_feats)
+                # val_feats = fsel.transform(val_feats)
 
-                    # # # ReliefF
-                    # fsel = ReliefF(n_neighbors=10, n_features_to_keep=n_keep)
-                    # inner_train_feats = fsel.fit_transform(inner_train_feats, inner_train_labels)
-                    # val_feats = fsel.transform(val_feats)
+                # # # ReliefF
+                # fsel = ReliefF(n_neighbors=10, n_features_to_keep=n_keep)
+                # inner_train_feats = fsel.fit_transform(inner_train_feats, inner_train_labels)
+                # val_feats = fsel.transform(val_feats)
 
-                    # # CFS
-                    # fs = CFS().fit(inner_train_feats, inner_train_labels, 'backward')
-                    # inner_train_feats = fs.transform(inner_train_feats)
-                    # val_feats = fs.transform(val_feats)
-                    # print(feature_names[fs.selected_features])
-                    # # inner_train_feats = inner_train_feats[:, cfs_idx]
-                    # # val_feats = val_feats[:, cfs_idx]
+                # # CFS
+                # fs = CFS().fit(inner_train_feats, inner_train_labels, 'backward')
+                # inner_train_feats = fs.transform(inner_train_feats)
+                # val_feats = fs.transform(val_feats)
+                # print(feature_names[fs.selected_features])
+                # # inner_train_feats = inner_train_feats[:, cfs_idx]
+                # # val_feats = val_feats[:, cfs_idx]
 
-                    # # FCBF
-                    # cfs_idx, dfd = FCBF.fcbf(inner_train_feats, inner_train_labels)
-                    # print(feature_names[cfs_idx])
-                    # print(dfd)
-                    # inner_train_feats = inner_train_feats[:, cfs_idx]
-                    # val_feats = val_feats[:, cfs_idx]
+                # # FCBF
+                # cfs_idx, dfd = FCBF.fcbf(inner_train_feats, inner_train_labels)
+                # print(feature_names[cfs_idx])
+                # print(dfd)
+                # inner_train_feats = inner_train_feats[:, cfs_idx]
+                # val_feats = val_feats[:, cfs_idx]
 
-                    val_model = SVC(C=cval, gamma='auto', kernel='rbf', random_state=0, class_weight='balanced')
-                    val_model.fit(inner_train_feats, inner_train_labels)
-                    predicted_val[train_sub == i_s] = val_model.predict(val_feats)
-                val_scores[j] = accuracy_score(train_labels, predicted_val)
-                j += 1
+                val_model = SVC(C=cval, gamma='auto', kernel='rbf', random_state=0, class_weight='balanced')
+                val_model.fit(inner_train_feats, inner_train_labels)
+                predicted_val[train_sub == i_s] = val_model.predict(val_feats)
+            val_scores[j] = accuracy_score(train_labels, predicted_val)
+            j += 1
 
     best_gamma = p_grid['gamma'][int(np.argmax(val_scores) % len(p_grid['gamma']))]
     best_C = p_grid['C'][int(np.argmax(val_scores) // len(p_grid['gamma']) % len(p_grid['C']))]
@@ -267,6 +295,7 @@ for s in subject_id:
     model.fit(train_feats, train_labels)
     predicted[all_sub == s] = model.predict(test_feats)
     predicted_testscore[all_sub == s] = model.decision_function(test_feats)
+    print('acc: ', accuracy_score(test_labels, predicted[all_sub == s]))
     print('elapsed time:', time.time() - start_time)
 
 
@@ -285,9 +314,9 @@ plot_confusion_matrix(ax1, compensation_labels, predicted, ['Abnormal', 'Normal'
 # plot_confusion_matrix(ax3, compensation_labels[~reach_retract_mask], predicted[~reach_retract_mask], ['Abnormal', 'Normal'], normalize=True)
 # ax3.set_title('Retracting')
 fig_conf.tight_layout()
-fig_conf.savefig('confusion_matrix_selectkbest_2class_nofiltadd_test2')
-np.save('selectkbest_2class_nofiltadd_test2', predicted)
-np.save('selectkbest_2class_score_nofiltadd_test2', predicted_testscore)
+fig_conf.savefig('confusion_matrix_selectkbest_2class_nofiltadd_test3')
+np.save('selectkbest_2class_nofiltadd_test3', predicted)
+np.save('selectkbest_2class_score_nofiltadd_test3', predicted_testscore)
 
 print('Accuracy: {:.3f}%'.format(accuracy_score(compensation_labels, predicted) * 100))
 print(classification_report(compensation_labels, predicted))

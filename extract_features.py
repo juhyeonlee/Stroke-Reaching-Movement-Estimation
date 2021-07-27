@@ -3,7 +3,6 @@ from scipy.signal import find_peaks, peak_prominences, periodogram
 from scipy.stats import skew, kurtosis, entropy, iqr, median_absolute_deviation
 from scipy.fftpack import fftfreq, fft
 from utils import rms
-import antropy as ant
 
 
 
@@ -40,8 +39,8 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     # feat.append(float(np.argmax(ts))/len(ts))
     # feature_names.append(prefix + 'peakloc/dur')
 
-    feat.append(float(len(peaks)))
-    feature_names.append(prefix + 'numpeaks')
+    # feat.append(float(len(peaks)))
+    # feature_names.append(prefix + 'numpeaks')
 
     feat.append(np.log(len(peaks)))
     feature_names.append(prefix + 'lognumpeaks')
@@ -141,11 +140,11 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     # feat.append(sortp[1])
     # feature_names.append(prefix + 'loc2stfreq')
 
-    feat.append(freq[sortp[0]])
-    feature_names.append(prefix + '1stfreq')
-
-    feat.append(freq[sortp[1]])
-    feature_names.append(prefix + '2ndfreq')
+    # feat.append(freq[sortp[0]])
+    # feature_names.append(prefix + '1stfreq')
+    #
+    # feat.append(freq[sortp[1]])
+    # feature_names.append(prefix + '2ndfreq')
 
     feat.append(np.log(freq[sortp[0]]))
     feature_names.append(prefix + 'log1stfreq')
@@ -168,8 +167,8 @@ def extract_features(ts, mft_score, z=False, fs=100, prefix='n'):
     # feat.append(psd[sortp[1]])
     # feature_names.append(prefix + '2ndpsd')
 
-    feat.append(len(freq))
-    feature_names.append(prefix + 'numfreq')
+    # feat.append(len(freq))
+    # feature_names.append(prefix + 'numfreq')
 
     feat.append(np.log(len(freq)))
     feature_names.append(prefix + 'lognumfreq')
